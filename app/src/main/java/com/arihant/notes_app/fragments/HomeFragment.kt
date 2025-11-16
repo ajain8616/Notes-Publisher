@@ -3,6 +3,8 @@ package com.arihant.notes_app.fragments
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.os.Handler
+import android.text.TextUtils.replace
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,6 +13,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.arihant.notes_app.R
@@ -20,6 +23,8 @@ import com.arihant.notes_app.firebase_controller.notes_data_handler.notes_events
 import com.arihant.notes_app.model.NotesTypeModel
 import com.google.android.material.button.MaterialButton
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.fragment.app.commit
+import com.arihant.notes_app.model.SharedViewModel
 
 class HomeFragment : Fragment() {
 
@@ -29,7 +34,7 @@ class HomeFragment : Fragment() {
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private lateinit var userName: String
     private lateinit var notesController: NotesEventsController
-
+    private val sharedViewModel: SharedViewModel by activityViewModels()
     @SuppressLint("SetTextI18n")
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -44,8 +49,12 @@ class HomeFragment : Fragment() {
         val imgSearch: ImageView = view.findViewById(R.id.imgSearch)
         swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout)
 
+        // RecyclerView setup
         rvNotesTypes.layoutManager = GridLayoutManager(requireContext(), 2)
-        notesAdapter = NotesTypeAdapter(notesList) { }
+        notesAdapter = NotesTypeAdapter(notesList) { category ->
+            // Handle category click -> pass to AddNotesFragment
+            openAddNotesFragment(category.title)
+        }
         rvNotesTypes.adapter = notesAdapter
 
         notesController = NotesEventsController()
@@ -54,6 +63,7 @@ class HomeFragment : Fragment() {
             refreshNotes()
         }
 
+        // Fetch user profile
         val prefs = requireActivity().getSharedPreferences("user_prefs", 0)
         val token = prefs.getString("user_token", null)
 
@@ -73,10 +83,12 @@ class HomeFragment : Fragment() {
             txtWelcome.text = "Welcome!"
         }
 
+        // Add category button
         imgAddCategory.setOnClickListener {
             showAddCategoryDialog()
         }
 
+        // Search categories
         imgSearch.setOnClickListener {
             showSearchDialog()
         }
@@ -84,6 +96,7 @@ class HomeFragment : Fragment() {
         return view
     }
 
+    // Fetch categories from Firebase
     private fun fetchCategories(uid: String) {
         notesController.getCategories(uid, { categories ->
             notesList.clear()
@@ -106,7 +119,6 @@ class HomeFragment : Fragment() {
                 }
             }
         }
-
         swipeRefreshLayout.isRefreshing = false
     }
 
@@ -206,4 +218,25 @@ class HomeFragment : Fragment() {
     private fun sortNotesList() {
         notesList.sortBy { it.title.lowercase() }
     }
+
+
+    // Open AddNotesFragment with selected category
+    private fun openAddNotesFragment(categoryName: String) {
+        Log.d("HomeFragment", "openAddNotesFragment called with category: $categoryName")
+
+        // Set category in ViewModel
+        sharedViewModel.setCategory(categoryName)
+        Log.d("HomeFragment", "Category set in SharedViewModel")
+
+        // Navigate to AddNotesFragment
+        val fragment = AddNotesFragment()
+        parentFragmentManager.beginTransaction()
+            .add(android.R.id.content, fragment)
+            .addToBackStack(null)
+            .commit()
+
+        Log.d("HomeFragment", "AddNotesFragment transaction committed")
+    }
+
+
 }
