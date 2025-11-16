@@ -1,0 +1,31 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme for Dark Mode -->
+    <style name="Base.Theme.Notes_app" parent="Theme.Material3.DayNight.NoActionBar">
+
+        <!-- Dark theme customizations -->
+        <item name="colorPrimary">@color/deep_navy</item>
+        <item name="colorPrimaryVariant">@color/forest_green</item>
+        <item name="colorSecondary">@color/accent_earth_brown</item>
+        <item name="colorSecondaryVariant">@color/accent_leaf_green</item>
+
+        <!-- Background and surface colors for Dark Mode -->
+        <item name="android:windowBackground">@color/dark_charcoal</item>
+        <item name="colorSurface">@color/slate_gray</item>
+        <item name="colorSurfaceVariant">@color/soft_gray</item>
+        <item name="colorOnSurface">@color/white</item>
+
+        <!-- Text colors -->
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/soft_beige</item>
+
+        <!-- Status and Navigation bar colors -->
+        <item name="android:statusBarColor">@color/deep_navy</item>
+        <item name="android:navigationBarColor">@color/slate_gray</item>
+
+        <!-- Error color -->
+        <item name="colorError">@color/deep_brown</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="colorOnError">@color/white</item>
+    </style>
+</resources>

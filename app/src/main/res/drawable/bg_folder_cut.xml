@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Strong Visible Shadow Layer -->
+    <item
+        android:gravity="top|end"
+        android:left="-6dp"
+        android:top="-6dp">
+        <shape android:shape="rectangle">
+            <size android:width="46dp" android:height="46dp" />
+            <corners android:bottomLeftRadius="22dp" />
+
+            <solid android:color="@android:color/transparent" />
+
+            <gradient
+                android:startColor="#99000000"
+                android:centerColor="#55000000"
+                android:endColor="#00000000"
+                android:angle="315"/>
+        </shape>
+    </item>
+
+    <!-- Foreground Decorative Cut -->
+    <item android:gravity="top|end">
+        <shape android:shape="rectangle">
+            <size android:width="38dp" android:height="38dp" />
+            <corners android:bottomLeftRadius="18dp" />
+            <solid android:color="@color/colorOnPrimary" />
+        </shape>
+    </item>
+
+</layer-list>

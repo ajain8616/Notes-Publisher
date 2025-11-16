@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/soft_beige"
+    tools:context=".activities.SplashActivity">
+
+
+    <!-- Main content container -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Logo with subtle elevation/animation -->
+        <ImageView
+            android:id="@+id/logo"
+            android:layout_width="150dp"
+            android:layout_height="150dp"
+            android:src="@drawable/ic_logo"
+            android:elevation="6dp"
+            android:contentDescription="App Logo"/>
+
+        <!-- App Name -->
+        <TextView
+            android:id="@+id/app_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Notes Publisher"
+            android:textColor="@color/deep_navy"
+            android:textSize="34sp"
+            android:fontFamily="@font/roboto_bold"
+            android:layout_marginTop="24dp"
+            android:gravity="center"/>
+
+        <!-- Optional tagline -->
+        <TextView
+            android:id="@+id/app_tagline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Your Smart Note Companion"
+            android:textColor="@color/deep_navy"
+            android:textSize="16sp"
+            android:fontFamily="@font/roboto_regular"
+            android:layout_marginTop="8dp"
+            android:gravity="center"/>
+
+        <!-- Modern Linear Progress Indicator -->
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/loading_bar"
+            android:layout_width="250dp"
+            android:layout_height="6dp"
+            android:layout_marginTop="32dp"
+            android:indeterminate="true"
+            app:indicatorColor="@color/accent_leaf_green"
+            app:trackColor="@color/deep_navy"
+            app:trackCornerRadius="3dp"/>
+    </LinearLayout>
+
+    <!-- Version info at bottom -->
+    <TextView
+        android:id="@+id/version_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Version 1.0"
+        android:textColor="@color/slate_gray"
+        android:textSize="14sp"
+        android:fontFamily="@font/roboto_regular"
+        android:layout_marginBottom="32dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+</androidx.constraintlayout.widget.ConstraintLayout>

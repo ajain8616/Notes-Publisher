@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="6dp"
+    app:cardUseCompatPadding="true"
+    android:backgroundTint="@color/light_sage">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:foreground="@drawable/bg_folder_cut">
+
+        <!-- Icon Holder -->
+        <RelativeLayout
+            android:id="@+id/iconCircle"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="@drawable/bg_icon_circle"
+            android:gravity="center"
+            android:elevation="5dp">
+
+            <ImageView
+                android:id="@+id/imgIcon"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_academic"
+                app:tint="@color/forest_green" />
+        </RelativeLayout>
+
+        <!-- Folder Title -->
+        <TextView
+            android:id="@+id/txtTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Personal"
+            android:textAlignment="center"
+            android:textColor="@color/dark_charcoal"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <!-- File Count -->
+        <TextView
+            android:id="@+id/txtFiles"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="30 Files"
+            android:textAlignment="center"
+            android:textColor="@color/slate_gray"
+            android:textSize="12sp"
+            android:maxLines="1" />
+
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

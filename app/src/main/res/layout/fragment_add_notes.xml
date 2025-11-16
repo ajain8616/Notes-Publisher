@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorBackground"
+    tools:context=".fragments.AddNotesFragment">
+
+    <!-- CardView Container -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/add_notes_card"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginTop="80dp"
+        android:layout_marginBottom="32dp"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="12dp"
+        app:cardBackgroundColor="@color/card_bg"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_margin="10dp"
+            android:padding="28dp">
+
+            <!-- Heading -->
+            <TextView
+                android:id="@+id/add_note_heading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Create New Note"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@color/deep_navy"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="24dp"
+                android:fontFamily="@font/roboto_bold"/>
+
+            <!-- Note Type Selector -->
+            <LinearLayout
+                android:id="@+id/note_type_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="12dp"
+                android:layout_marginBottom="20dp"
+                android:weightSum="3"
+                android:background="@drawable/bg_note_type"
+                android:clipToOutline="true"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp">
+
+                <ImageView
+                    android:id="@+id/noteTypeIcon"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="0.8"
+                    android:contentDescription="Note Type Icon"
+                    android:src="@drawable/ic_others"
+                    android:scaleType="centerInside"/>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2.2"
+                    android:orientation="vertical"
+                    android:paddingStart="12dp">
+
+                    <TextView
+                        android:id="@+id/noteTypeTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Note Category Name"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/deep_navy"
+                        android:fontFamily="@font/roboto_medium"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Note Title Input -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/note_title_layout"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Note Title"
+                android:layout_marginBottom="16dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edtNoteTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="15sp"
+                    android:textColor="@color/deep_navy"
+                    android:padding="8dp"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Note Description Input -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/note_desc_layout"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Write your note..."
+                android:layout_marginBottom="24dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edtNoteDesc"
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp"
+                    android:textSize="15sp"
+                    android:gravity="top"
+                    android:inputType="textMultiLine"
+                    android:textColor="@color/deep_navy"
+                    android:padding="8dp"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Save Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSaveNote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Save Note"
+                android:textSize="16sp"
+                android:textColor="@android:color/white"
+                android:fontFamily="@font/roboto_medium"
+                app:cornerRadius="16dp"
+                app:backgroundTint="@color/accent_leaf_green"/>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

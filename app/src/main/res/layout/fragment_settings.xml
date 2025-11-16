@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/soft_beige"
+    tools:context=".fragments.SettingsFragment">
+
+    <!-- Top Image -->
+    <ImageView
+        android:id="@+id/topImage"
+        android:layout_width="match_parent"
+        android:layout_height="250dp"
+        android:src="@drawable/bg_logo"
+        android:scaleType="centerCrop" />
+
+    <!-- Card Container -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/topImage"
+        android:background="@color/soft_beige"
+        android:orientation="vertical"
+        android:padding="15dp">
+
+        <!-- User Details Section -->
+        <RelativeLayout
+            android:id="@+id/layoutUserDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="12dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingVertical="6dp">
+
+            <ImageView
+                android:id="@+id/iconUserDetails"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_profile"
+                android:tint="@color/forest_green" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toEndOf="@id/iconUserDetails"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/textUserName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/roboto_medium"
+                    android:text="John Doe"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/textUserEmail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/roboto_regular"
+                    android:text="johndoe@email.com"
+                    android:textColor="@color/slate_gray"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="16dp"
+                android:src="@drawable/ic_arrow_right"
+                android:tint="@color/slate_gray" />
+        </RelativeLayout>
+
+        <!-- Online/Offline Section -->
+        <RelativeLayout
+            android:id="@+id/layoutOnlineOffline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="12dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingVertical="6dp">
+
+            <ImageView
+                android:id="@+id/iconOnlineOffline"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_wifi"
+                android:tint="@color/forest_green" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toEndOf="@id/iconOnlineOffline"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/textOnlineOffline"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/roboto_medium"
+                    android:text="Online/Offline"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/hintOnlineOffline"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/roboto_regular"
+                    android:text="Switch between online and offline modes"
+                    android:textColor="@color/slate_gray"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="16dp"
+                android:src="@drawable/ic_arrow_right"
+                android:tint="@color/slate_gray" />
+        </RelativeLayout>
+
+        <!-- Download Data Section -->
+        <RelativeLayout
+            android:id="@+id/layoutDownloadData"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingVertical="6dp">
+
+            <ImageView
+                android:id="@+id/iconDownloadData"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_report"
+                android:tint="@color/forest_green" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toEndOf="@id/iconDownloadData"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/textDownloadData"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/roboto_medium"
+                    android:text="Download Data"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/hintDownloadData"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/roboto_regular"
+                    android:text="Download your data"
+                    android:textColor="@color/slate_gray"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="16dp"
+                android:src="@drawable/ic_arrow_right"
+                android:tint="@color/slate_gray" />
+        </RelativeLayout>
+
+        <!-- App Preferences Section -->
+        <RelativeLayout
+            android:id="@+id/layoutAppPreferences"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingVertical="6dp">
+
+            <ImageView
+                android:id="@+id/iconAppPreferences"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_preferences"
+                android:tint="@color/forest_green" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toEndOf="@id/iconAppPreferences"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/textAppPreferences"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/roboto_medium"
+                    android:text="App Preferences"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/hintAppPreferences"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/roboto_regular"
+                    android:text="Modify app preferences"
+                    android:textColor="@color/slate_gray"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="16dp"
+                android:src="@drawable/ic_arrow_right"
+                android:tint="@color/slate_gray" />
+        </RelativeLayout>
+
+        <!-- Logout Section (NO tint changes) -->
+        <RelativeLayout
+            android:id="@+id/layoutLogout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingVertical="6dp">
+
+            <ImageView
+                android:id="@+id/iconLogout"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_logout" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toEndOf="@id/iconLogout"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/textLogout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/roboto_medium"
+                    android:text="Logout"
+                    android:textColor="@color/dark_charcoal"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/hintLogout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/roboto_regular"
+                    android:text="Log out of your account"
+                    android:textColor="@color/forest_green"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="16dp"
+                android:src="@drawable/ic_arrow_right" />
+        </RelativeLayout>
+
+    </LinearLayout>
+
+</RelativeLayout>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "145124420524",
+    "project_id": "notes-publisher-ec4a1",
+    "storage_bucket": "notes-publisher-ec4a1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:145124420524:android:f0ed5805b81bbcb09b6809",
+        "android_client_info": {
+          "package_name": "com.arihant.notes_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDHUANOj_O8G7lNSibVXPlaYcifINrF-tg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
