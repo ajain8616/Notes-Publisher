@@ -19,7 +19,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.arihant.notes_app.R
 import com.arihant.notes_app.model.NotesModel
@@ -30,8 +29,8 @@ import java.util.Locale
 class NotesAdapter(
     private val context: Context,
     private var notesList: MutableList<NotesModel>,
-    private val onEditClick: ((NotesModel) -> Unit)? = null,
-    private val onDeleteClick: ((NotesModel) -> Unit)? = null
+    private val onEditClick: (NotesModel) -> Unit,
+    private val onDeleteClick: (NotesModel) -> Unit
 ) : RecyclerView.Adapter<NotesAdapter.NoteViewHolder>() {
 
     inner class NoteViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -47,6 +46,8 @@ class NotesAdapter(
         return NoteViewHolder(view)
     }
 
+    override fun getItemCount(): Int = notesList.size
+
     override fun onBindViewHolder(holder: NoteViewHolder, position: Int) {
         val note = notesList[position]
 
@@ -54,32 +55,14 @@ class NotesAdapter(
         holder.txtDescription.text = note.description
 
         val sdf = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
-        val createdAtStr = sdf.format(Date(note.createdAt))
-        holder.txtDate.text = createdAtStr
+        holder.txtDate.text = sdf.format(Date(note.createdAt))
 
-        holder.imgEdit.setOnClickListener {
-            onEditClick?.invoke(note)
-            Toast.makeText(context, "Edit clicked for: ${note.title}", Toast.LENGTH_SHORT).show()
-        }
-
-        holder.imgDelete.setOnClickListener {
-            onDeleteClick?.invoke(note)
-            Toast.makeText(context, "Deleted: ${note.title}", Toast.LENGTH_SHORT).show()
-            removeItem(position)
-        }
+        holder.imgEdit.setOnClickListener { onEditClick(note) }
+        holder.imgDelete.setOnClickListener { onDeleteClick(note) }
     }
 
-
-    override fun getItemCount(): Int = notesList.size
-
-    fun updateList(newList: List<NotesModel>) {
-        notesList = newList.toMutableList()
+    fun updateList(newNotes: List<NotesModel>) {
+        notesList = newNotes.toMutableList()
         notifyDataSetChanged()
-    }
-
-    private fun removeItem(position: Int) {
-        notesList.removeAt(position)
-        notifyItemRemoved(position)
-        notifyItemRangeChanged(position, notesList.size)
     }
 }

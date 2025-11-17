@@ -26,7 +26,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_back"
-            android:tint="@color/deep_navy"/>
+            app:tint="@color/deep_navy" />
 
         <TextView
             android:id="@+id/titleName"
@@ -45,14 +45,14 @@
             android:layout_height="26dp"
             android:layout_marginEnd="16dp"
             android:src="@drawable/ic_add_notes"
-            android:tint="@color/deep_navy"/>
+            app:tint="@color/deep_navy" />
 
         <ImageView
             android:id="@+id/searchBtn"
             android:layout_width="26dp"
             android:layout_height="26dp"
             android:src="@drawable/ic_search"
-            android:tint="@color/deep_navy"/>
+            app:tint="@color/deep_navy" />
     </LinearLayout>
 
 
@@ -65,7 +65,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-       tools:listitem="@layout/notes_add_item"/>
+        tools:listitem="@layout/notes_add_item"/>
 
 
     <androidx.cardview.widget.CardView
@@ -100,38 +100,6 @@
                 android:fontFamily="@font/roboto_bold"
                 android:layout_gravity="center"
                 android:layout_marginBottom="22dp"/>
-
-
-            <!-- NOTE TYPE SELECTOR -->
-            <LinearLayout
-                android:id="@+id/note_type_container"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="14dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:background="@drawable/bg_note_type"
-                android:clipToOutline="true"
-                android:layout_marginBottom="20dp">
-
-                <ImageView
-                    android:id="@+id/noteTypeIcon"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@drawable/ic_others"
-                    android:scaleType="centerInside"/>
-
-                <TextView
-                    android:id="@+id/noteTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:text="Note Category"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/deep_navy"
-                    android:fontFamily="@font/roboto_medium"/>
-            </LinearLayout>
 
 
             <!-- NOTE TITLE -->
@@ -187,5 +155,93 @@
                 app:cornerRadius="16dp"/>
         </LinearLayout>
     </androidx.cardview.widget.CardView>
+
+
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/edit_notes_card"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:layout_margin="24dp"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="14dp"
+        app:cardBackgroundColor="@color/card_bg"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="28dp">
+
+            <!-- Title -->
+            <TextView
+                android:id="@+id/edit_note_heading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Edit Note"
+                android:textSize="22sp"
+                android:textColor="@color/deep_navy"
+                android:fontFamily="@font/roboto_bold"
+                android:layout_gravity="center"
+                android:layout_marginBottom="22dp"/>
+
+            <!-- NOTE TITLE -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/edit_note_title_layout"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Note Title"
+                android:layout_marginBottom="16dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edtEditNoteTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="15sp"
+                    android:padding="8dp"
+                    android:textColor="@color/deep_navy"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- NOTE DESCRIPTION -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/edit_note_desc_layout"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Write your note..."
+                android:layout_marginBottom="24dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edtEditNoteDesc"
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp"
+                    android:gravity="top"
+                    android:padding="8dp"
+                    android:textSize="15sp"
+                    android:textColor="@color/deep_navy"
+                    android:inputType="textMultiLine"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- UPDATE BUTTON -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnUpdateNote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Update Note"
+                android:textSize="16sp"
+                android:textColor="@android:color/white"
+                android:fontFamily="@font/roboto_medium"
+                app:backgroundTint="@color/accent_leaf_green"
+                app:cornerRadius="16dp"/>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

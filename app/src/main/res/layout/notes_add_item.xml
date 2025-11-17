@@ -4,17 +4,20 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="8dp"
-    app:cardUseCompatPadding="true"
-    android:backgroundTint="@color/light_sage"
-    android:layout_marginBottom="8dp">
+    android:layout_marginStart="16dp"
+    android:layout_marginEnd="16dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="18dp"
+    app:cardElevation="6dp"
+    app:cardUseCompatPadding="false"
+    android:backgroundTint="@color/light_sage">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="12dp"
+        android:padding="20dp"
         android:foreground="@drawable/bg_folder_cut">
 
         <LinearLayout
@@ -22,7 +25,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="4dp">
+            android:layout_marginBottom="10dp">
 
             <TextView
                 android:id="@+id/txtTitle"
@@ -31,44 +34,44 @@
                 android:layout_weight="1"
                 android:text="Note Title"
                 android:textColor="@color/dark_charcoal"
-                android:textSize="18sp"
+                android:textSize="20sp"
                 android:textStyle="bold"
                 android:maxLines="1"
                 android:ellipsize="end" />
 
             <ImageView
                 android:id="@+id/imgEdit"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:src="@drawable/ic_edit"
                 android:contentDescription="Edit"
-                android:tint="@color/forest_green"
-                android:padding="4dp"
+                android:padding="6dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:layout_marginEnd="8dp"/>
+                android:layout_marginEnd="9dp"
+                app:tint="@color/forest_green" />
 
             <ImageView
                 android:id="@+id/imgDelete"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:src="@drawable/ic_delete"
-                android:layout_marginEnd="35dp"
                 android:contentDescription="Delete"
-                android:tint="@color/colorError"
-                android:padding="4dp"
-                android:background="?attr/selectableItemBackgroundBorderless"/>
+                android:padding="6dp"
+                android:layout_marginEnd="16dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="@color/colorError" />
         </LinearLayout>
 
         <TextView
             android:id="@+id/txtDescription"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="4dp"
+            android:layout_marginBottom="12dp"
             android:text="This is the note description."
             android:textColor="@color/slate_gray"
-            android:textSize="14sp"
-            android:lineSpacingExtra="2dp"
-            android:maxLines="5"
+            android:textSize="15sp"
+            android:lineSpacingExtra="4dp"
+            android:maxLines="6"
             android:ellipsize="end" />
 
         <TextView
@@ -77,7 +80,7 @@
             android:layout_height="wrap_content"
             android:text="17 Nov 2025"
             android:textColor="@color/gray_500"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:layout_gravity="end" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

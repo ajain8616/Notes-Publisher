@@ -34,7 +34,9 @@ class HomeFragment : Fragment() {
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private lateinit var userName: String
     private lateinit var notesController: NotesEventsController
+    private lateinit var userId: String
     private val sharedViewModel: SharedViewModel by activityViewModels()
+
     @SuppressLint("SetTextI18n")
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -52,8 +54,7 @@ class HomeFragment : Fragment() {
         // RecyclerView setup
         rvNotesTypes.layoutManager = GridLayoutManager(requireContext(), 2)
         notesAdapter = NotesTypeAdapter(notesList) { category ->
-            // Handle category click -> pass to AddNotesFragment
-            openAddNotesFragment(category.title)
+            openAddNotesFragment(category)
         }
         rvNotesTypes.adapter = notesAdapter
 
@@ -72,6 +73,7 @@ class HomeFragment : Fragment() {
             authController.getUserProfileByToken(token) { success, user, uid ->
                 if (success && user != null && uid != null) {
                     userName = user.name
+                    userId = uid
                     txtWelcome.text = "Welcome, $userName!"
                     fetchCategories(uid)
                 } else {
@@ -79,6 +81,7 @@ class HomeFragment : Fragment() {
                     Toast.makeText(requireContext(), "Failed to fetch user info", Toast.LENGTH_SHORT).show()
                 }
             }
+
         } else {
             txtWelcome.text = "Welcome!"
         }
@@ -139,7 +142,13 @@ class HomeFragment : Fragment() {
             if (title.isEmpty()) {
                 Toast.makeText(requireContext(), "Please enter category name", Toast.LENGTH_SHORT).show()
             } else {
-                val newCategory = NotesTypeModel(title, 0, "ic_others")
+                val newCategory = NotesTypeModel(
+                    id = "", // temporarily empty
+                    title = title,
+                    filesCount = 0,
+                    icon = "ic_others"
+                )
+
                 notesList.add(newCategory)
                 sortNotesList()
                 notesAdapter.notifyDataSetChanged()
@@ -150,7 +159,9 @@ class HomeFragment : Fragment() {
                     val authController = GetAuthController(requireContext())
                     authController.getUserProfileByToken(token) { success, user, uid ->
                         if (success && uid != null) {
-                            notesController.addCategory(uid, newCategory, {
+                            notesController.addCategory(uid, newCategory, { generatedId ->
+                                newCategory.id = generatedId
+                                notesAdapter.notifyDataSetChanged()
                                 Toast.makeText(requireContext(), "Category added!", Toast.LENGTH_SHORT).show()
                             }, { exception ->
                                 Toast.makeText(requireContext(), "Failed to add category: ${exception.message}", Toast.LENGTH_SHORT).show()
@@ -158,6 +169,7 @@ class HomeFragment : Fragment() {
                         }
                     }
                 }
+
                 dialog.dismiss()
             }
         }
@@ -221,22 +233,24 @@ class HomeFragment : Fragment() {
 
 
     // Open AddNotesFragment with selected category
-    private fun openAddNotesFragment(categoryName: String) {
-        Log.d("HomeFragment", "openAddNotesFragment called with category: $categoryName")
+    private fun openAddNotesFragment(category: NotesTypeModel) {
+        Log.d("HomeFragment", "openAddNotesFragment called with category: ${category.title}")
 
-        // Set category in ViewModel
-        sharedViewModel.setCategory(categoryName)
-        Log.d("HomeFragment", "Category set in SharedViewModel")
+        // Set values in SharedViewModel
+        sharedViewModel.setCategory(category.title)
+        sharedViewModel.setCategoryId(category.id)
+        sharedViewModel.setUid(userId)  // Make sure userId is fetched and stored
+
+        Log.d("HomeFragment", "Category ID: ${category.id}, UID: $userId set in SharedViewModel")
 
         // Navigate to AddNotesFragment
-        val fragment = AddNotesFragment()
-        parentFragmentManager.beginTransaction()
-            .add(android.R.id.content, fragment)
-            .addToBackStack(null)
-            .commit()
-
-        Log.d("HomeFragment", "AddNotesFragment transaction committed")
+        parentFragmentManager.commit {
+            add(android.R.id.content, AddNotesFragment())
+            addToBackStack(null)
+        }
     }
+
+
 
 
 }
