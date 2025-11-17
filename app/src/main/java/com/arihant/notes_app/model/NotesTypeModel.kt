@@ -15,6 +15,6 @@ package com.arihant.notes_app.model
 data class NotesTypeModel(
     var id: String,
     val title: String,
-    val filesCount: Int,
+    var filesCount: Int,
     val icon: String
 )

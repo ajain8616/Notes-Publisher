@@ -24,6 +24,7 @@ import com.google.android.material.button.MaterialButton
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.fragment.app.commit
 import com.arihant.notes_app.model.SharedViewModel
+import com.google.firebase.firestore.FirebaseFirestore
 
 class HomeFragment : Fragment() {
 
@@ -36,11 +37,10 @@ class HomeFragment : Fragment() {
     private lateinit var userId: String
     private val sharedViewModel: SharedViewModel by activityViewModels()
 
+    private val db = FirebaseFirestore.getInstance()
+
     @SuppressLint("SetTextI18n")
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
 
         val view = inflater.inflate(R.layout.fragment_home, container, false)
 
@@ -50,7 +50,6 @@ class HomeFragment : Fragment() {
         val imgSearch: ImageView = view.findViewById(R.id.imgSearch)
         swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout)
 
-        // RecyclerView setup
         rvNotesTypes.layoutManager = GridLayoutManager(requireContext(), 2)
         notesAdapter = NotesTypeAdapter(notesList) { category ->
             openAddNotesFragment(category)
@@ -62,8 +61,6 @@ class HomeFragment : Fragment() {
         swipeRefreshLayout.setOnRefreshListener {
             refreshNotes()
         }
-
-        // Fetch user profile
         val prefs = requireActivity().getSharedPreferences("user_prefs", 0)
         val token = prefs.getString("user_token", null)
 
@@ -80,17 +77,12 @@ class HomeFragment : Fragment() {
                     Toast.makeText(requireContext(), "Failed to fetch user info", Toast.LENGTH_SHORT).show()
                 }
             }
-
-        } else {
-            txtWelcome.text = "Welcome!"
         }
 
-        // Add category button
         imgAddCategory.setOnClickListener {
             showAddCategoryDialog()
         }
 
-        // Search categories
         imgSearch.setOnClickListener {
             showSearchDialog()
         }
@@ -98,13 +90,17 @@ class HomeFragment : Fragment() {
         return view
     }
 
-    // Fetch categories from Firebase
+    // ------------ FETCH CATEGORIES + NOTES COUNT ------------------
+
     private fun fetchCategories(uid: String) {
         notesController.getCategories(uid, { categories ->
+
             notesList.clear()
             notesList.addAll(categories)
+
             sortNotesList()
             notesAdapter.notifyDataSetChanged()
+
         }, { exception ->
             Toast.makeText(requireContext(), "Failed to load categories: ${exception.message}", Toast.LENGTH_SHORT).show()
         })
@@ -124,6 +120,8 @@ class HomeFragment : Fragment() {
         swipeRefreshLayout.isRefreshing = false
     }
 
+    // -------------------- ADD CATEGORY DIALOG ---------------------
+
     @SuppressLint("NotifyDataSetChanged")
     private fun showAddCategoryDialog() {
         val dialog = android.app.Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen)
@@ -138,43 +136,47 @@ class HomeFragment : Fragment() {
 
         btnSaveCategory.setOnClickListener {
             val title = edtCategoryTitle.text.toString().trim()
+
             if (title.isEmpty()) {
                 Toast.makeText(requireContext(), "Please enter category name", Toast.LENGTH_SHORT).show()
-            } else {
-                val newCategory = NotesTypeModel(
-                    id = "", // temporarily empty
-                    title = title,
-                    filesCount = 0,
-                    icon = "ic_others"
-                )
+                return@setOnClickListener
+            }
 
-                notesList.add(newCategory)
-                sortNotesList()
-                notesAdapter.notifyDataSetChanged()
+            val newCategory = NotesTypeModel(
+                id = "",
+                title = title,
+                filesCount = 0,
+                icon = "ic_others"
+            )
 
-                val prefs = requireActivity().getSharedPreferences("user_prefs", 0)
-                val token = prefs.getString("user_token", null)
-                if (token != null) {
-                    val authController = GetAuthController(requireContext())
-                    authController.getUserProfileByToken(token) { success, user, uid ->
-                        if (success && uid != null) {
-                            notesController.addCategory(uid, newCategory, { generatedId ->
-                                newCategory.id = generatedId
-                                notesAdapter.notifyDataSetChanged()
-                                Toast.makeText(requireContext(), "Category added!", Toast.LENGTH_SHORT).show()
-                            }, { exception ->
-                                Toast.makeText(requireContext(), "Failed to add category: ${exception.message}", Toast.LENGTH_SHORT).show()
-                            })
-                        }
+            notesList.add(newCategory)
+            sortNotesList()
+            notesAdapter.notifyDataSetChanged()
+
+            val prefs = requireActivity().getSharedPreferences("user_prefs", 0)
+            val token = prefs.getString("user_token", null)
+
+            if (token != null) {
+                val authController = GetAuthController(requireContext())
+                authController.getUserProfileByToken(token) { success, user, uid ->
+                    if (success && uid != null) {
+                        notesController.addCategory(uid, newCategory, { generatedId ->
+                            newCategory.id = generatedId
+                            notesAdapter.notifyDataSetChanged()
+                            Toast.makeText(requireContext(), "Category added!", Toast.LENGTH_SHORT).show()
+                        }, { exception ->
+                            Toast.makeText(requireContext(), "Failed to add category: ${exception.message}", Toast.LENGTH_SHORT).show()
+                        })
                     }
                 }
-
-                dialog.dismiss()
             }
+            dialog.dismiss()
         }
 
         dialog.show()
     }
+
+    // --------------------- SEARCH DIALOG ------------------------
 
     @SuppressLint("NotifyDataSetChanged")
     private fun showSearchDialog() {
@@ -230,26 +232,17 @@ class HomeFragment : Fragment() {
         notesList.sortBy { it.title.lowercase() }
     }
 
+    // --------------------- OPEN ADD NOTES -----------------------
 
-    // Open AddNotesFragment with selected category
     private fun openAddNotesFragment(category: NotesTypeModel) {
-        Log.d("HomeFragment", "openAddNotesFragment called with category: ${category.title}")
 
-        // Set values in SharedViewModel
         sharedViewModel.setCategory(category.title)
         sharedViewModel.setCategoryId(category.id)
-        sharedViewModel.setUid(userId)  // Make sure userId is fetched and stored
+        sharedViewModel.setUid(userId)
 
-        Log.d("HomeFragment", "Category ID: ${category.id}, UID: $userId set in SharedViewModel")
-
-        // Navigate to AddNotesFragment
         parentFragmentManager.commit {
             add(android.R.id.content, AddNotesFragment())
             addToBackStack(null)
         }
     }
-
-
-
-
 }

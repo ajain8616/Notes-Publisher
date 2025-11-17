@@ -20,35 +20,25 @@
         android:textColor="@color/noteText"
         android:layout_marginBottom="14dp"/>
 
-    <!-- Horizontal Filter Tabs -->
-    <LinearLayout
+    <!-- SwipeRefreshLayout for Notes -->
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefreshLayout"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="4dp"
-        android:background="@drawable/border">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingTop="8dp">
 
+        <!-- Sticky Notes List -->
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvFilterTabs"
+            android:id="@+id/rvStickyNotes"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
+            android:nestedScrollingEnabled="true"
             android:overScrollMode="never"
-            android:nestedScrollingEnabled="false"
-            android:padding="8dp"
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            tools:listitem="@layout/item_filter_tab" />
+            android:paddingBottom="10dp"
+            app:layoutManager="androidx.recyclerview.widget.StaggeredGridLayoutManager"
+            app:spanCount="2"
+            tools:listitem="@layout/item_sticky_note"/>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-    </LinearLayout>
-
-    <!-- Sticky Notes List -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvStickyNotes"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:nestedScrollingEnabled="true"
-        android:overScrollMode="never"
-        android:paddingBottom="10dp"
-        app:layoutManager="androidx.recyclerview.widget.StaggeredGridLayoutManager"
-        app:spanCount="2"
-        tools:listitem="@layout/item_sticky_note"/>
 </LinearLayout>

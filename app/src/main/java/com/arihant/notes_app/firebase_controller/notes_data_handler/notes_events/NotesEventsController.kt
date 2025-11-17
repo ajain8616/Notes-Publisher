@@ -1,19 +1,5 @@
 package com.arihant.notes_app.firebase_controller.notes_data_handler.notes_events
 
-
-/**
- * Author: Arihant Jain
- * Date: 16-11-2025
- * Time: 22:40
- * Year: 2025
- * Month: November (Nov)
- * Day: 16 (Sunday)
- * Hour: 22
- * Minute: 40
- * Project: notes_app
- * Package: com.arihant.notes_app.firebase_controller.notes_events
- */
-
 import android.util.Log
 import com.arihant.notes_app.model.NotesModel
 import com.arihant.notes_app.model.NotesTypeModel
@@ -26,7 +12,7 @@ class NotesEventsController {
     private val TAG = "NotesEventsController"
 
     // ================================
-    // ADD CATEGORY
+    // ADD CATEGORY (No Duplicates)
     // ================================
     fun addCategory(
         uid: String,
@@ -34,24 +20,36 @@ class NotesEventsController {
         onSuccess: (String) -> Unit,
         onFailure: (Exception) -> Unit
     ) {
-        val categoryId = UUID.randomUUID().toString()
-        val categoryData = hashMapOf(
-            "title" to category.title,
-            "filesCount" to category.filesCount,
-            "icon" to category.icon
-        )
-
+        // Check for duplicate category by title first
         db.collection("Notes_Collections").document(uid)
-            .collection("categories").document(categoryId)
-            .set(categoryData)
-            .addOnSuccessListener { onSuccess(categoryId) }
+            .collection("categories")
+            .whereEqualTo("title", category.title)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                if (snapshot.isEmpty) {
+                    val categoryId = UUID.randomUUID().toString()
+                    val categoryData = hashMapOf(
+                        "title" to category.title,
+                        "filesCount" to 0,
+                        "icon" to category.icon,
+                        "createdAt" to System.currentTimeMillis(),
+                        "updatedAt" to System.currentTimeMillis()
+                    )
+
+                    db.collection("Notes_Collections").document(uid)
+                        .collection("categories").document(categoryId)
+                        .set(categoryData)
+                        .addOnSuccessListener { onSuccess(categoryId) }
+                        .addOnFailureListener { onFailure(it) }
+                } else {
+                    onFailure(Exception("Category with this title already exists"))
+                }
+            }
             .addOnFailureListener { onFailure(it) }
     }
 
-
-
     // ================================
-    // GET CATEGORIES
+    // GET CATEGORIES (Sorted A-Z)
     // ================================
     fun getCategories(
         uid: String,
@@ -62,22 +60,50 @@ class NotesEventsController {
             .collection("categories")
             .get()
             .addOnSuccessListener { snapshot ->
+
                 val categories = snapshot.documents.mapNotNull { doc ->
                     NotesTypeModel(
                         id = doc.id,
                         title = doc.getString("title") ?: return@mapNotNull null,
-                        filesCount = doc.getLong("filesCount")?.toInt() ?: 0,
+                        filesCount = 0, // will update after count
                         icon = doc.getString("icon") ?: "ic_important"
                     )
                 }
-                onSuccess(categories)
+
+                if (categories.isEmpty()) {
+                    onSuccess(emptyList())
+                    return@addOnSuccessListener
+                }
+
+                var pending = categories.size
+
+                categories.forEach { model ->
+                    db.collection("Notes_Collections")
+                        .document(uid)
+                        .collection("categories")
+                        .document(model.id)
+                        .collection("categoryNotes")
+                        .get()
+                        .addOnSuccessListener { notesSnapshot ->
+                            model.filesCount = notesSnapshot.size()
+                            pending--
+                            if (pending == 0) {
+                                onSuccess(categories.sortedBy { it.title }) // Sort A-Z
+                            }
+                        }
+                        .addOnFailureListener {
+                            pending--
+                            if (pending == 0) {
+                                onSuccess(categories.sortedBy { it.title })
+                            }
+                        }
+                }
             }
             .addOnFailureListener { onFailure(it) }
     }
 
-
     // ==========================================================
-    // 1️⃣ ADD NOTE BASED ON CATEGORY
+    // ADD NOTE BASED ON CATEGORY (No Duplicate Titles)
     // ==========================================================
     fun addNoteBasedOnCategory(
         uid: String,
@@ -86,30 +112,43 @@ class NotesEventsController {
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit
     ) {
-        val noteId = note.id.toString()
-
-        val noteData = hashMapOf(
-            "id" to note.id,
-            "title" to note.title,
-            "description" to note.description,
-            "category" to note.category,
-            "createdAt" to note.createdAt,
-            "updatedAt" to note.updatedAt
-        )
-
+        // Check for duplicate note title first
         db.collection("Notes_Collections").document(uid)
             .collection("categories").document(categoryId)
-            .collection("categoryNotes").document(noteId)
-            .set(noteData)
-            .addOnSuccessListener {
-                Log.d(TAG, "Note added to $categoryId: $noteId")
-                onSuccess()
+            .collection("categoryNotes")
+            .whereEqualTo("title", note.title)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                if (snapshot.isEmpty) {
+                    val noteId = note.id ?: System.currentTimeMillis().toInt()
+                    val currentTime = System.currentTimeMillis()
+                    val noteData = hashMapOf(
+                        "id" to noteId,
+                        "title" to note.title,
+                        "description" to note.description,
+                        "category" to note.category,
+                        "createdAt" to currentTime,
+                        "updatedAt" to currentTime
+                    )
+
+                    db.collection("Notes_Collections").document(uid)
+                        .collection("categories").document(categoryId)
+                        .collection("categoryNotes").document(noteId.toString())
+                        .set(noteData)
+                        .addOnSuccessListener {
+                            Log.d(TAG, "Note added to $categoryId: $noteId")
+                            onSuccess()
+                        }
+                        .addOnFailureListener { onFailure(it) }
+                } else {
+                    onFailure(Exception("Note with this title already exists in this category"))
+                }
             }
             .addOnFailureListener { onFailure(it) }
     }
 
     // ==========================================================
-    // 2️⃣ GET NOTES BASED ON CATEGORY
+    // GET NOTES BASED ON CATEGORY (Sorted A-Z)
     // ==========================================================
     fun getNotesBasedOnCategory(
         uid: String,
@@ -128,17 +167,17 @@ class NotesEventsController {
                         title = doc.getString("title") ?: "",
                         description = doc.getString("description") ?: "",
                         category = doc.getString("category") ?: "",
-                        createdAt = doc.getLong("createdAt") ?: 0L,
-                        updatedAt = doc.getLong("updatedAt") ?: 0L
+                        createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis(),
+                        updatedAt = doc.getLong("updatedAt") ?: System.currentTimeMillis()
                     )
                 }
-                onSuccess(notes)
+                onSuccess(notes.sortedBy { it.title }) // Sort A-Z
             }
             .addOnFailureListener { onFailure(it) }
     }
 
     // ==========================================================
-    // 3️⃣ EDIT NOTE BASED ON CATEGORY
+    // EDIT NOTE BASED ON CATEGORY
     // ==========================================================
     fun editNoteBasedOnCategory(
         uid: String,
@@ -148,7 +187,6 @@ class NotesEventsController {
         onFailure: (Exception) -> Unit
     ) {
         val noteId = note.id.toString()
-
         val updatedData = mapOf(
             "title" to note.title,
             "description" to note.description,
@@ -167,7 +205,7 @@ class NotesEventsController {
     }
 
     // ==========================================================
-    // 4️⃣ DELETE NOTE BASED ON CATEGORY
+    // DELETE NOTE BASED ON CATEGORY
     // ==========================================================
     fun deleteNoteBasedOnCategory(
         uid: String,

@@ -1,25 +1,13 @@
 package com.arihant.notes_app.adapters
 
-/**
- * Author: Arihant Jain
- * Date: 17-11-2025
- * Time: 18:11
- * Year: 2025
- * Month: November (Nov)
- * Day: 17 (Monday)
- * Hour: 18
- * Minute: 11
- * Project: notes_app
- * Package: com.arihant.notes_app.adapters
- */
-
-
 import android.content.Context
+import android.os.Build
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.annotation.RequiresApi
 import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
@@ -44,7 +32,7 @@ class StickyNotesAdapter(
         R.color.noteOrange,
         R.color.notePink,
         R.color.notePaleGreen,
-        R.color.notePaleBlue,
+        R.color.notePaleBlue
     )
 
     private var colorQueue = cardColors.shuffled().toMutableList()
@@ -72,35 +60,25 @@ class StickyNotesAdapter(
         return StickyNoteViewHolder(view)
     }
 
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     override fun onBindViewHolder(holder: StickyNotesAdapter.StickyNoteViewHolder, position: Int) {
         val note = notesList[position]
 
-        holder.noteMessage.text = note.message
         holder.noteCategory.text = note.category
+        holder.noteMessage.text = note.message.ifEmpty { "No Title Available" }
         holder.noteCount.text = "${note.count} Notes"
 
-        // Format Date
-        val sdf = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
+        val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
         holder.noteDate.text = sdf.format(Date(note.date))
 
-        // rotation effect
         holder.cardView.rotation = rotations.random()
 
-        // unique card background tint
-        if (colorQueue.isEmpty()) {
-            colorQueue = cardColors.shuffled().toMutableList()
-        }
-
-        val pickedColor = colorQueue.removeFirst()
+        if (colorQueue.isEmpty()) colorQueue = cardColors.shuffled().toMutableList()
         holder.cardView.backgroundTintList =
-            ContextCompat.getColorStateList(context, pickedColor)
+            ContextCompat.getColorStateList(context, colorQueue.removeFirst())
 
-        // unique pin color
         holder.pinIcon.setColorFilter(ContextCompat.getColor(context, pinColors.random()))
     }
 
     override fun getItemCount(): Int = notesList.size
 }
-
-
-

@@ -1,22 +1,22 @@
 package com.arihant.notes_app.fragments
 
 import android.Manifest
-import android.app.AlertDialog
+import android.app.Dialog
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Canvas
-import android.graphics.Color
+import android.content.res.ColorStateList
 import android.graphics.Paint
+import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
-import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
+import android.widget.ImageView
 import android.widget.RelativeLayout
-import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
@@ -32,26 +32,24 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.firestore.FirebaseFirestore
 import java.io.File
 import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class SettingsFragment : Fragment() {
 
     private lateinit var txtUserName: TextView
     private lateinit var txtUserEmail: TextView
+
     private var isOnline: Boolean = true
     private var currentTheme: String = "default"
-    private lateinit var layoutUserDetails: RelativeLayout
-    private lateinit var layoutOnlineOffline: RelativeLayout
-    private lateinit var layoutDownloadData: RelativeLayout
-    private lateinit var layoutAppPreferences: RelativeLayout
-    private lateinit var layoutLogout: RelativeLayout
-
-    private lateinit var getAuthController: GetAuthController
-    private lateinit var authController: AuthController
-
     private var token: String? = null
     private var uid: String? = null
 
     private val REQUEST_STORAGE_PERMISSION = 100
+
+    private lateinit var getAuthController: GetAuthController
+    private lateinit var authController: AuthController
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -66,12 +64,6 @@ class SettingsFragment : Fragment() {
         txtUserName = view.findViewById(R.id.textUserName)
         txtUserEmail = view.findViewById(R.id.textUserEmail)
 
-        layoutUserDetails = view.findViewById(R.id.layoutUserDetails)
-        layoutOnlineOffline = view.findViewById(R.id.layoutOnlineOffline)
-        layoutDownloadData = view.findViewById(R.id.layoutDownloadData)
-        layoutAppPreferences = view.findViewById(R.id.layoutAppPreferences)
-        layoutLogout = view.findViewById(R.id.layoutLogout)
-
         val prefs = requireActivity().getSharedPreferences("user_prefs", 0)
         token = prefs.getString("user_token", null)
         uid = prefs.getString("user_uid", null)
@@ -84,52 +76,73 @@ class SettingsFragment : Fragment() {
         loadUserProfile(token!!)
         if (uid != null) startTokenListener(uid!!, token!!)
 
-        layoutUserDetails.setOnClickListener {
+        view.findViewById<RelativeLayout>(R.id.layoutUserDetails).setOnClickListener {
             showProfileUpdateDialog()
         }
-
-        layoutOnlineOffline.setOnClickListener {
+        view.findViewById<RelativeLayout>(R.id.layoutOnlineOffline).setOnClickListener {
             showOnlineOfflineDialog()
         }
-
-        layoutDownloadData.setOnClickListener {
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), REQUEST_STORAGE_PERMISSION)
-            } else {
-                showDownloadDataConfirmationDialog()
-            }
+        view.findViewById<RelativeLayout>(R.id.layoutDownloadData).setOnClickListener {
+            requestDownloadPermission()
         }
-
-        layoutAppPreferences.setOnClickListener {
+        view.findViewById<RelativeLayout>(R.id.layoutAppPreferences).setOnClickListener {
             showThemeSelectDialog()
         }
-
-        layoutLogout.setOnClickListener {
+        view.findViewById<RelativeLayout>(R.id.layoutLogout).setOnClickListener {
             showLogoutConfirmationDialog()
         }
 
         return view
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_STORAGE_PERMISSION) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                showDownloadDataConfirmationDialog()
-            } else {
-                Toast.makeText(requireContext(), "Storage permission required to download data", Toast.LENGTH_SHORT).show()
-            }
+    // -----------------------------------------------------
+    // PERMISSION HANDLER
+    // -----------------------------------------------------
+
+    private fun requestDownloadPermission() {
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                requireActivity(),
+                arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                REQUEST_STORAGE_PERMISSION
+            )
+        } else {
+            showDownloadDataConfirmationDialog()
         }
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        if (requestCode == REQUEST_STORAGE_PERMISSION &&
+            grantResults.isNotEmpty() &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
+        ) {
+            showDownloadDataConfirmationDialog()
+        } else {
+            Toast.makeText(requireContext(), "Permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // -----------------------------------------------------
+    // AUTH
+    // -----------------------------------------------------
+
     private fun loadUserProfile(token: String) {
         getAuthController.getUserProfileByToken(token) { success, user, fetchedUid ->
-            if (success && user != null && fetchedUid != null) {
+            if (success && user != null) {
+
                 txtUserName.text = user.name
                 txtUserEmail.text = user.email
-                isOnline = user.isOnline
                 uid = fetchedUid
-                startTokenListener(fetchedUid, token)
+                isOnline = user.isOnline
+
             } else {
                 Toast.makeText(requireContext(), "User not found!", Toast.LENGTH_LONG).show()
             }
@@ -162,78 +175,122 @@ class SettingsFragment : Fragment() {
         requireActivity().finish()
     }
 
-    private fun showProfileUpdateDialog() {
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_notes_events_handler, null)
-        val profileCard = dialogView.findViewById<View>(R.id.profile_update_card)
-        profileCard.visibility = View.VISIBLE
+    // -----------------------------------------------------
+    // FULL SCREEN DIALOGS (LIKE SEARCH DIALOG)
+    // -----------------------------------------------------
 
-        val edtProfileName = dialogView.findViewById<TextInputEditText>(R.id.edtProfileName)
-        val edtProfileEmail = dialogView.findViewById<TextInputEditText>(R.id.edtProfileEmail)
-        val btnProfileUpdate = dialogView.findViewById<MaterialButton>(R.id.btnProfileUpdate)
-        val btnCloseDialog = dialogView.findViewById<View>(R.id.btnCloseDialog)
-
-        edtProfileName.setText(txtUserName.text)
-        edtProfileEmail.setText(txtUserEmail.text)
-        val dialog = AlertDialog.Builder(requireContext())
-            .setView(dialogView)
-            .setCancelable(false)
-            .create()
-
-        btnCloseDialog.setOnClickListener {
-            dialog.dismiss()
+    private fun getFullScreenDialog(): Dialog {
+        return Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen).apply {
+            setContentView(R.layout.dialog_notes_events_handler)
+            setCancelable(true)
         }
+    }
 
-        btnProfileUpdate.setOnClickListener {
-            val newName = edtProfileName.text.toString().trim()
-            val newEmail = edtProfileEmail.text.toString().trim()
+    // -------------------------
+    // PROFILE UPDATE DIALOG
+    // -------------------------
 
-            if (newName.isEmpty() || newEmail.isEmpty()) {
-                Toast.makeText(requireContext(), "Name and Email cannot be empty", Toast.LENGTH_SHORT).show()
+    private fun showProfileUpdateDialog() {
+        val dialog = getFullScreenDialog()
+
+        val mainCard = dialog.findViewById<View>(R.id.dialog_card)
+        val card = dialog.findViewById<View>(R.id.profile_update_card)
+        val btnClose = dialog.findViewById<ImageView>(R.id.btnCloseDialog)
+
+        mainCard.visibility = View.GONE
+        card.visibility = View.VISIBLE
+
+        val edtName = dialog.findViewById<TextInputEditText>(R.id.edtProfileName)
+        val edtEmail = dialog.findViewById<TextInputEditText>(R.id.edtProfileEmail)
+        val btnUpdate = dialog.findViewById<MaterialButton>(R.id.btnProfileUpdate)
+
+        edtName.setText(txtUserName.text)
+        edtEmail.setText(txtUserEmail.text)
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+
+        btnUpdate.setOnClickListener {
+            val name = edtName.text.toString().trim()
+            val email = edtEmail.text.toString().trim()
+
+            if (name.isEmpty() || email.isEmpty()) {
+                Toast.makeText(requireContext(), "All fields required", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            getAuthController.updateUserProfileByToken(token!!, newName, newEmail) { success, message ->
+
+            getAuthController.updateUserProfileByToken(token!!, name, email) { success, message ->
                 if (success) {
-                    txtUserName.text = newName
-                    txtUserEmail.text = newEmail
-                    Toast.makeText(requireContext(), "Profile updated successfully", Toast.LENGTH_SHORT).show()
+                    txtUserName.text = name
+                    txtUserEmail.text = email
+                    Toast.makeText(requireContext(), "Updated", Toast.LENGTH_SHORT).show()
                     dialog.dismiss()
                 } else {
-                    Toast.makeText(requireContext(), message ?: "Update failed", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
                 }
             }
         }
 
         dialog.show()
     }
+
+    // -------------------------
+    // ONLINE/OFFLINE DIALOG
+    // -------------------------
 
     private fun showOnlineOfflineDialog() {
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_notes_events_handler, null)
+        val dialog = getFullScreenDialog()
 
-        val modeCard = dialogView.findViewById<View>(R.id.mode_card)
-        modeCard.visibility = View.VISIBLE
-        val switchMode = dialogView.findViewById<Switch>(R.id.switchMode)
-        val btnApplyMode = dialogView.findViewById<MaterialButton>(R.id.btnApplyMode)
-        val btnCloseDialog = dialogView.findViewById<View>(R.id.btnCloseDialog)
-        switchMode.isChecked = !isOnline
+        dialog.findViewById<View>(R.id.dialog_card)?.visibility = View.GONE
+        dialog.findViewById<View>(R.id.mode_card)?.visibility = View.VISIBLE
 
-        val dialog = AlertDialog.Builder(requireContext())
-            .setView(dialogView)
-            .setCancelable(false)
-            .create()
+        val switchMode = dialog.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchMode)
+        val txtMode = dialog.findViewById<TextView>(R.id.txtMode)
+        val btnApply = dialog.findViewById<MaterialButton>(R.id.btnApplyMode)
+        val btnClose = dialog.findViewById<ImageView>(R.id.btnCloseDialog)
 
-        btnCloseDialog.setOnClickListener {
-            dialog.dismiss()
+        // Set switch checked state: on for online, off for offline
+        switchMode.isChecked = isOnline
+        txtMode.text = if (switchMode.isChecked) "Online Mode" else "Offline Mode"
+
+        val thumbColors = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(
+                requireContext().getColor(R.color.accent_leaf_green),
+                requireContext().getColor(R.color.gray_400)
+            )
+        )
+        val trackColors = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(
+                requireContext().getColor(R.color.mist_blue),
+                requireContext().getColor(R.color.gray_200)
+            )
+        )
+        switchMode.thumbTintList = thumbColors
+        switchMode.trackTintList = trackColors
+
+        switchMode.setOnCheckedChangeListener { _, isChecked ->
+            txtMode.text = if (isChecked) "Online Mode" else "Offline Mode"
         }
-        btnApplyMode.setOnClickListener {
-            val newIsOnline = !switchMode.isChecked
 
-            getAuthController.updateUserProfileByToken(token!!, isOnline = newIsOnline) { success, message ->
+        btnClose.setOnClickListener { dialog.dismiss() }
+
+        btnApply.setOnClickListener {
+            val newStatus = switchMode.isChecked
+
+            getAuthController.updateUserProfileByToken(token!!, isOnline = newStatus) { success, message ->
                 if (success) {
-                    isOnline = newIsOnline
-                    Toast.makeText(requireContext(), "Mode updated successfully", Toast.LENGTH_SHORT).show()
+                    isOnline = newStatus
+                    Toast.makeText(requireContext(), "Status Updated", Toast.LENGTH_SHORT).show()
                     dialog.dismiss()
                 } else {
-                    Toast.makeText(requireContext(), message ?: "Update failed", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -241,33 +298,29 @@ class SettingsFragment : Fragment() {
         dialog.show()
     }
 
+    // -------------------------
+    // DOWNLOAD CONFIRMATION DIALOG
+    // -------------------------
+
     private fun showDownloadDataConfirmationDialog() {
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_notes_events_handler, null)
-        val permissionCard = dialogView.findViewById<View>(R.id.permission_card)
+        val dialog = getFullScreenDialog()
+
+        dialog.findViewById<View>(R.id.dialog_card).visibility = View.GONE
+
+        val permissionCard = dialog.findViewById<View>(R.id.permission_card)
+        val btnCancel = dialog.findViewById<MaterialButton>(R.id.btnPermissionCancel)
+        val btnConfirm = dialog.findViewById<MaterialButton>(R.id.btnPermissionConfirm)
+        val btnClose = dialog.findViewById<ImageView>(R.id.btnCloseDialog)
+
         permissionCard.visibility = View.VISIBLE
-        val permissionTitle = dialogView.findViewById<TextView>(R.id.permissionTitle)
-        val permissionDesc = dialogView.findViewById<TextView>(R.id.permissionDesc)
-        val btnPermissionCancel = dialogView.findViewById<MaterialButton>(R.id.btnPermissionCancel)
-        val btnPermissionConfirm = dialogView.findViewById<MaterialButton>(R.id.btnPermissionConfirm)
-        val btnCloseDialog = dialogView.findViewById<View>(R.id.btnCloseDialog)
 
-        permissionTitle.text = "Confirm Download"
-        permissionDesc.text = "Are you sure you want to download all your notes data as PDF?"
+        dialog.findViewById<TextView>(R.id.permissionTitle).text = "Confirm Download"
+        dialog.findViewById<TextView>(R.id.permissionDesc).text = "Download all your notes as PDF?"
 
-        val dialog = AlertDialog.Builder(requireContext())
-            .setView(dialogView)
-            .setCancelable(false)
-            .create()
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnCancel.setOnClickListener { dialog.dismiss() }
 
-        btnCloseDialog.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        btnPermissionCancel.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        btnPermissionConfirm.setOnClickListener {
+        btnConfirm.setOnClickListener {
             dialog.dismiss()
             downloadUserData()
         }
@@ -275,90 +328,29 @@ class SettingsFragment : Fragment() {
         dialog.show()
     }
 
-    private fun downloadUserData() {
-        val db = FirebaseFirestore.getInstance()
-        val userId = uid ?: return
-
-        db.collection("Notes_Collections")
-            .whereEqualTo("user_id", userId)
-            .get()
-            .addOnSuccessListener { querySnapshot ->
-                val pdfDocument = PdfDocument()
-                val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
-                val page = pdfDocument.startPage(pageInfo)
-                val canvas = page.canvas
-                val paint = Paint()
-                paint.color = Color.BLACK
-                paint.textSize = 12f
-
-                var yPosition = 50f
-                canvas.drawText("User Notes Data", 50f, yPosition, paint)
-                yPosition += 30f
-
-                for (document in querySnapshot.documents) {
-                    val data = document.data
-                    if (data != null) {
-                        canvas.drawText("Note ID: ${document.id}", 50f, yPosition, paint)
-                        yPosition += 20f
-                        for ((key, value) in data) {
-                            canvas.drawText("$key: $value", 50f, yPosition, paint)
-                            yPosition += 20f
-                        }
-                        yPosition += 20f
-                    }
-                }
-
-                pdfDocument.finishPage(page)
-
-                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                val fileName = "notes_data_${System.currentTimeMillis()}.pdf"
-                val file = File(downloadsDir, fileName)
-                FileOutputStream(file).use { outputStream ->
-                    pdfDocument.writeTo(outputStream)
-                }
-                pdfDocument.close()
-
-                Toast.makeText(requireContext(), "PDF saved to Downloads: $fileName", Toast.LENGTH_LONG).show()
-
-                val uri = FileProvider.getUriForFile(requireContext(), "${requireContext().packageName}.provider", file)
-                val intent = Intent(Intent.ACTION_SEND)
-                intent.type = "application/pdf"
-                intent.putExtra(Intent.EXTRA_STREAM, uri)
-                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                startActivity(Intent.createChooser(intent, "Share Notes PDF"))
-            }
-            .addOnFailureListener { e ->
-                Toast.makeText(requireContext(), "Download failed: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-    }
+    // -------------------------
+    // LOGOUT DIALOG
+    // -------------------------
 
     private fun showLogoutConfirmationDialog() {
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_notes_events_handler, null)
-        val permissionCard = dialogView.findViewById<View>(R.id.permission_card)
+        val dialog = getFullScreenDialog()
+
+        dialog.findViewById<View>(R.id.dialog_card).visibility = View.GONE
+
+        val permissionCard = dialog.findViewById<View>(R.id.permission_card)
+        val btnCancel = dialog.findViewById<MaterialButton>(R.id.btnPermissionCancel)
+        val btnConfirm = dialog.findViewById<MaterialButton>(R.id.btnPermissionConfirm)
+        val btnClose = dialog.findViewById<ImageView>(R.id.btnCloseDialog)
+
         permissionCard.visibility = View.VISIBLE
-        val permissionTitle = dialogView.findViewById<TextView>(R.id.permissionTitle)
-        val permissionDesc = dialogView.findViewById<TextView>(R.id.permissionDesc)
-        val btnPermissionCancel = dialogView.findViewById<MaterialButton>(R.id.btnPermissionCancel)
-        val btnPermissionConfirm = dialogView.findViewById<MaterialButton>(R.id.btnPermissionConfirm)
-        val btnCloseDialog = dialogView.findViewById<View>(R.id.btnCloseDialog)
 
-        permissionTitle.text = "Confirm Logout"
-        permissionDesc.text = "Are you sure you want to log out? This will end your current session."
+        dialog.findViewById<TextView>(R.id.permissionTitle).text = "Confirm Logout"
+        dialog.findViewById<TextView>(R.id.permissionDesc).text = "Do you want to logout?"
 
-        val dialog = AlertDialog.Builder(requireContext())
-            .setView(dialogView)
-            .setCancelable(false)
-            .create()
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnCancel.setOnClickListener { dialog.dismiss() }
 
-        btnCloseDialog.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        btnPermissionCancel.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        btnPermissionConfirm.setOnClickListener {
+        btnConfirm.setOnClickListener {
             dialog.dismiss()
             logoutUser()
         }
@@ -366,71 +358,267 @@ class SettingsFragment : Fragment() {
         dialog.show()
     }
 
-    private fun showThemeSelectDialog() {
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_notes_events_handler, null)
+    // -------------------------
+    // THEME SELECT DIALOG
+    // -------------------------
 
-        val themeCard = dialogView.findViewById<View>(R.id.theme_select_card)
+    private fun showThemeSelectDialog() {
+        val dialog = getFullScreenDialog()
+
+        dialog.findViewById<View>(R.id.dialog_card).visibility = View.GONE
+
+        val themeCard = dialog.findViewById<View>(R.id.theme_select_card)
+        val chkDefault = dialog.findViewById<CheckBox>(R.id.chkDefaultTheme)
+        val chkDark = dialog.findViewById<CheckBox>(R.id.chkDarkTheme)
+        val chkLight = dialog.findViewById<CheckBox>(R.id.chkLightTheme)
+        val btnApply = dialog.findViewById<MaterialButton>(R.id.btnApplyTheme)
+        val btnClose = dialog.findViewById<ImageView>(R.id.btnCloseDialog)
+
         themeCard.visibility = View.VISIBLE
 
-        val chkDefaultTheme = dialogView.findViewById<CheckBox>(R.id.chkDefaultTheme)
-        val chkDarkTheme = dialogView.findViewById<CheckBox>(R.id.chkDarkTheme)
-        val chkLightTheme = dialogView.findViewById<CheckBox>(R.id.chkLightTheme)
-        val btnApplyTheme = dialogView.findViewById<MaterialButton>(R.id.btnApplyTheme)
-        val btnCloseDialog = dialogView.findViewById<View>(R.id.btnCloseDialog)
+        // Load the current theme from SharedPreferences
+        val sharedPreferences = requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        currentTheme = sharedPreferences.getString("selected_theme", "default") ?: "default"
 
+        // Set the checkboxes based on the loaded currentTheme
         when (currentTheme) {
-            "default" -> chkDefaultTheme.isChecked = true
-            "dark" -> chkDarkTheme.isChecked = true
-            "light" -> chkLightTheme.isChecked = true
+            "default" -> chkDefault.isChecked = true
+            "dark" -> chkDark.isChecked = true
+            "light" -> chkLight.isChecked = true
         }
 
-        chkDefaultTheme.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                chkDarkTheme.isChecked = false
-                chkLightTheme.isChecked = false
+        chkDefault.setOnCheckedChangeListener { _, checked ->
+            if (checked) {
+                chkDark.isChecked = false
+                chkLight.isChecked = false
             }
         }
-        chkDarkTheme.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                chkDefaultTheme.isChecked = false
-                chkLightTheme.isChecked = false
+        chkDark.setOnCheckedChangeListener { _, checked ->
+            if (checked) {
+                chkDefault.isChecked = false
+                chkLight.isChecked = false
             }
         }
-        chkLightTheme.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                chkDefaultTheme.isChecked = false
-                chkDarkTheme.isChecked = false
+        chkLight.setOnCheckedChangeListener { _, checked ->
+            if (checked) {
+                chkDefault.isChecked = false
+                chkDark.isChecked = false
             }
         }
 
-        val dialog = AlertDialog.Builder(requireContext())
-            .setView(dialogView)
-            .setCancelable(false)
-            .create()
+        btnClose.setOnClickListener { dialog.dismiss() }
 
-        btnCloseDialog.setOnClickListener {
-            dialog.dismiss()
-        }
+        btnApply.setOnClickListener {
+            currentTheme =
+                when {
+                    chkDefault.isChecked -> "default"
+                    chkDark.isChecked -> "dark"
+                    chkLight.isChecked -> "light"
+                    else -> "default"
+                }
 
-        btnApplyTheme.setOnClickListener {
-            val selectedTheme = when {
-                chkDefaultTheme.isChecked -> "default"
-                chkDarkTheme.isChecked -> "dark"
-                chkLightTheme.isChecked -> "light"
-                else -> "default"
+            // Save the selected theme to SharedPreferences
+            with(sharedPreferences.edit()) {
+                putString("selected_theme", currentTheme)
+                apply()
             }
-            applyTheme(selectedTheme)
+
+            requireActivity().recreate()
+            Toast.makeText(requireContext(), "Theme Applied", Toast.LENGTH_SHORT).show()
             dialog.dismiss()
         }
 
         dialog.show()
     }
 
-    private fun applyTheme(theme: String) {
-        currentTheme = theme
+    // -----------------------------------------------------
+    // DOWNLOAD PDF
+    // -----------------------------------------------------
 
-        requireActivity().recreate()
+    private fun downloadUserData() {
+        val db = FirebaseFirestore.getInstance()
+        val userId = uid ?: return
 
-        Toast.makeText(requireContext(), "Theme applied: $theme", Toast.LENGTH_SHORT).show()
+        val pdf = PdfDocument()
+
+        // ---- Load Theme Colors ----
+        val colorBg = ContextCompat.getColor(requireContext(), R.color.colorBackground)
+        val colorPrimary = ContextCompat.getColor(requireContext(), R.color.colorPrimary)
+        val colorAccent = ContextCompat.getColor(requireContext(), R.color.accent_leaf_green)
+        val colorDivider = ContextCompat.getColor(requireContext(), R.color.divider_gray)
+        val textMain = ContextCompat.getColor(requireContext(), R.color.dark_charcoal)
+        val textSub = ContextCompat.getColor(requireContext(), R.color.gray_700)
+        val white = ContextCompat.getColor(requireContext(), R.color.white)
+
+        // ---- Title Text ----
+        val titlePaint = Paint().apply {
+            textSize = 24f
+            color = white
+            typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD)
+            textAlign = Paint.Align.CENTER
+        }
+
+        // ---- Header Box Paint ----
+        val titleBarPaint = Paint().apply {
+            color = colorPrimary
+            style = Paint.Style.FILL
+        }
+
+        // ---- Category Header Label ----
+        val categoryPaint = Paint().apply {
+            color = colorAccent
+            style = Paint.Style.FILL
+        }
+
+        // ---- Normal Text ----
+        val contentPaint = Paint().apply {
+            textSize = 14f
+            color = textMain
+        }
+
+        // ---- Sub Content / Description ----
+        val descPaint = Paint().apply {
+            textSize = 13f
+            color = textSub
+        }
+
+        // ---- Divider Paint ----
+        val dividerPaint = Paint().apply {
+            color = colorDivider
+            strokeWidth = 1.5f
+        }
+
+        // Date Formatter
+        val dateFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
+
+        var pageNumber = 1
+        var pageInfo = PdfDocument.PageInfo.Builder(595, 842, pageNumber).create()
+        var page = pdf.startPage(pageInfo)
+        var canvas = page.canvas
+        var y = 40f
+
+        fun addPage() {
+            pdf.finishPage(page)
+            pageNumber++
+            pageInfo = PdfDocument.PageInfo.Builder(595, 842, pageNumber).create()
+            page = pdf.startPage(pageInfo)
+            canvas = page.canvas
+            y = 40f
+
+            // Repeat title bar on every page
+            canvas.drawRect(0f, 0f, pageInfo.pageWidth.toFloat(), 60f, titleBarPaint)
+            canvas.drawText("User Notes Report", (pageInfo.pageWidth / 2).toFloat(), 38f, titlePaint)
+            y = 90f
+        }
+
+        // ---- Draw Title Bar ----
+        canvas.drawRect(0f, 0f, pageInfo.pageWidth.toFloat(), 60f, titleBarPaint)
+        canvas.drawText("User Notes Report", (pageInfo.pageWidth / 2).toFloat(), 38f, titlePaint)
+        y += 60
+
+        // Background fill (optional for aesthetic)
+        canvas.drawColor(colorBg)
+
+        db.collection("Notes_Collections")
+            .document(userId)
+            .collection("categories")
+            .get()
+            .addOnSuccessListener { categorySnapshot ->
+
+                if (categorySnapshot.isEmpty) {
+                    Toast.makeText(requireContext(), "No notes found!", Toast.LENGTH_SHORT).show()
+                    return@addOnSuccessListener
+                }
+
+                val categories = categorySnapshot.documents
+                var pending = categories.size
+
+                for (catDoc in categories) {
+
+                    val categoryName = catDoc.getString("title") ?: "Untitled Category"
+
+                    if (y > 720) addPage()
+
+                    // ---- Category Header Box ----
+                    canvas.drawRect(30f, y, 565f, y + 40f, categoryPaint)
+                    canvas.drawText("📂  $categoryName", 40f, y + 27f, contentPaint.apply { color = textMain })
+
+                    y += 50
+
+                    db.collection("Notes_Collections")
+                        .document(userId)
+                        .collection("categories")
+                        .document(catDoc.id)
+                        .collection("categoryNotes")
+                        .get()
+                        .addOnSuccessListener { notesSnapshot ->
+
+                            if (notesSnapshot.isEmpty) {
+                                canvas.drawText("No notes available", 40f, y, descPaint)
+                                y += 25
+                            }
+
+                            for (noteDoc in notesSnapshot) {
+
+                                val id = noteDoc.getLong("id") ?: 0
+                                val title = noteDoc.getString("title") ?: "No Title"
+                                val desc = noteDoc.getString("description") ?: "No Description"
+                                val created = noteDoc.getLong("createdAt") ?: 0L
+                                val updated = noteDoc.getLong("updatedAt") ?: 0L
+
+                                if (y > 720) addPage()
+
+                                canvas.drawText("• ID: $id", 40f, y, contentPaint)
+                                y += 20
+
+                                canvas.drawText("Title: $title", 40f, y, contentPaint)
+                                y += 20
+
+                                canvas.drawText("Description:", 40f, y, contentPaint)
+                                y += 18
+
+                                // wrap description
+                                desc.chunked(55).forEach {
+                                    canvas.drawText("   → $it", 55f, y, descPaint)
+                                    y += 18
+                                }
+
+                                canvas.drawText("Created: ${dateFormat.format(Date(created))}", 40f, y, descPaint)
+                                y += 18
+
+                                canvas.drawText("Updated: ${dateFormat.format(Date(updated))}", 40f, y, descPaint)
+                                y += 25
+
+                                // divider
+                                canvas.drawLine(30f, y, 565f, y, dividerPaint)
+                                y += 15
+                            }
+
+                            pending--
+
+                            if (pending == 0) {
+                                pdf.finishPage(page)
+
+                                val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                                val file = File(downloads, "UserNotes_${System.currentTimeMillis()}.pdf")
+                                FileOutputStream(file).use { pdf.writeTo(it) }
+                                pdf.close()
+
+                                val uri = FileProvider.getUriForFile(requireContext(), "${requireContext().packageName}.provider", file)
+
+                                Toast.makeText(requireContext(), "PDF Saved Successfully!", Toast.LENGTH_LONG).show()
+
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "application/pdf"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                startActivity(Intent.createChooser(intent, "Share PDF"))
+                            }
+                        }
+                }
+
+            }
     }
+
 }

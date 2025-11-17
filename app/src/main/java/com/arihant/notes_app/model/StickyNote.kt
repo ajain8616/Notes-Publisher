@@ -20,4 +20,3 @@ data class StickyNote(
     val count: Int,
     val date: Long
 )
-
