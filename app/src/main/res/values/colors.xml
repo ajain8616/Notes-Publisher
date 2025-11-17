@@ -56,4 +56,16 @@
     <color name="hint_gray">#9E9E9E</color>
     <color name="disabled_gray">#E0E0E0</color>
     <color name="shadow_gray">#4D000000</color>
+
+    <color name="noteMint">#B5EAEA</color>
+    <color name="notePeach">#FFBCBC</color>
+    <color name="noteLavender">#C9A7EB</color>
+    <color name="noteYellow">#FFF6BD</color>
+    <color name="noteSkyBlue">#9ADCFF</color>
+    <color name="noteOrange">#FFD8A8</color>
+    <color name="noteText">#333333</color>
+    <color name="notePink">#FFCCE5</color>
+    <color name="notePaleGreen">#D4F8C4</color>
+    <color name="notePaleBlue">#D6EAF8</color>
+
 </resources>

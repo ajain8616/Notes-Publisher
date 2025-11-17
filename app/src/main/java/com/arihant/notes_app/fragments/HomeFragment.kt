@@ -3,7 +3,6 @@ package com.arihant.notes_app.fragments
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.os.Handler
-import android.text.TextUtils.replace
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -128,7 +127,7 @@ class HomeFragment : Fragment() {
     @SuppressLint("NotifyDataSetChanged")
     private fun showAddCategoryDialog() {
         val dialog = android.app.Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen)
-        dialog.setContentView(R.layout.dialog_add_search_notes)
+        dialog.setContentView(R.layout.dialog_notes_events_handler)
         dialog.setCancelable(true)
 
         val btnCloseDialog: ImageView? = dialog.findViewById(R.id.btnCloseDialog)
@@ -180,7 +179,7 @@ class HomeFragment : Fragment() {
     @SuppressLint("NotifyDataSetChanged")
     private fun showSearchDialog() {
         val dialog = android.app.Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen)
-        dialog.setContentView(R.layout.dialog_add_search_notes)
+        dialog.setContentView(R.layout.dialog_notes_events_handler)
         dialog.setCancelable(true)
 
         val btnCloseDialog: ImageView = dialog.findViewById(R.id.btnCloseDialog)

@@ -125,8 +125,9 @@ class AddNotesFragment : Fragment() {
             requireContext(),
             notesList,
             onEditClick = { note -> editNote(note) },
-            onDeleteClick = { note -> deleteNote(note) }
+            onDeleteClick = { note -> showDeleteConfirmationDialog(note) }
         )
+
         notesRecycler.layoutManager = LinearLayoutManager(requireContext())
         notesRecycler.adapter = notesAdapter
     }
@@ -205,25 +206,6 @@ class AddNotesFragment : Fragment() {
         )
     }
 
-    private fun deleteNote(note: NotesModel) {
-        Log.d(TAG, "Deleting note: ${note.id} - ${note.title}")
-
-        notesEventsController.deleteNoteBasedOnCategory(
-            uid,
-            categoryId,
-            note.id,
-            onSuccess = {
-                Log.d(TAG, "Note deleted successfully.")
-                Toast.makeText(requireContext(), "Deleted!", Toast.LENGTH_SHORT).show()
-                loadNotes()
-            },
-            onFailure = {
-                Log.e(TAG, "Delete failed for note: ${note.id}")
-                Toast.makeText(requireContext(), "Delete failed!", Toast.LENGTH_SHORT).show()
-            }
-        )
-    }
-
     private fun editNote(note: NotesModel) {
         Log.d(TAG, "Editing note: ${note.id} - ${note.title}")
 
@@ -274,7 +256,7 @@ class AddNotesFragment : Fragment() {
 
     private fun showSearchDialog() {
         val dialog = android.app.Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen)
-        dialog.setContentView(R.layout.dialog_add_search_notes)
+        dialog.setContentView(R.layout.dialog_notes_events_handler)
         dialog.setCancelable(true)
 
         val btnCloseDialog: ImageView = dialog.findViewById(R.id.btnCloseDialog)
@@ -319,4 +301,54 @@ class AddNotesFragment : Fragment() {
     private fun sortNotesList() {
         notesList.sortBy { it.title.lowercase() }
     }
+
+    private fun showDeleteConfirmationDialog(note: NotesModel) {
+        val dialog = android.app.Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        dialog.setContentView(R.layout.dialog_notes_events_handler)
+        dialog.setCancelable(true)
+
+        val mainCard: View = dialog.findViewById(R.id.dialog_card)
+        val searchCard: View = dialog.findViewById(R.id.search_card)
+
+        val permissionCard: View = dialog.findViewById(R.id.permission_card) // Assuming this exists in XML
+        val txtTitle: TextView = dialog.findViewById(R.id.permissionTitle) // Add these IDs in XML
+        val txtDescription: TextView = dialog.findViewById(R.id.permissionDesc)
+        val btnConfirm: MaterialButton = dialog.findViewById(R.id.btnPermissionConfirm)
+        val btnCancel: MaterialButton = dialog.findViewById(R.id.btnPermissionCancel)
+
+        mainCard.visibility = View.GONE
+        searchCard.visibility = View.GONE
+        permissionCard.visibility = View.VISIBLE
+
+        // Set note info
+        txtTitle.text = note.title
+        txtDescription.text = note.description
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnConfirm.setOnClickListener {
+            dialog.dismiss()
+            performDeleteNote(note)
+        }
+
+        dialog.show()
+    }
+    private fun performDeleteNote(note: NotesModel) {
+        Log.d(TAG, "Deleting note: ${note.id} - ${note.title}")
+
+        notesEventsController.deleteNoteBasedOnCategory(
+            uid,
+            categoryId,
+            note.id,
+            onSuccess = {
+                Log.d(TAG, "Note deleted successfully.")
+                Toast.makeText(requireContext(), "Deleted!", Toast.LENGTH_SHORT).show()
+                loadNotes()
+            },
+            onFailure = {
+                Log.e(TAG, "Delete failed for note: ${note.id}")
+                Toast.makeText(requireContext(), "Delete failed!", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
 }

@@ -52,14 +52,14 @@ class AuthController(private val context: Context) {
                         email = email,
                         token = token,
                         createdTime = System.currentTimeMillis(),
-                        updatedTime = System.currentTimeMillis()
+                        updatedTime = System.currentTimeMillis(),
+                        isOnline = true // User is online initially
                     )
 
                     Log.d(TAG, "Sending verification email...")
 
                     user.sendEmailVerification()
                         .addOnSuccessListener {
-
                             database.child("Users").child(uid).setValue(userObj)
                                 .addOnSuccessListener {
                                     Log.d(TAG, "User saved successfully: $email")
@@ -70,7 +70,6 @@ class AuthController(private val context: Context) {
                                     Log.e(TAG, "Database error: ${e.message}")
                                     callback(false, "Database error: ${e.message}", null)
                                 }
-
                         }
                         .addOnFailureListener { e ->
                             Log.e(TAG, "Verification email failed, deleting user...")

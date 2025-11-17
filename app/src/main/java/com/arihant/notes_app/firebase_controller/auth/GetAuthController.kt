@@ -35,7 +35,7 @@ class GetAuthController(private val context: Context) {
                         val user = userSnap.getValue(UserModel::class.java)
                         val uid = userSnap.key
                         if (user != null && uid != null) {
-                            Log.d(TAG, "User found: ${user.name}, uid=$uid")
+                            Log.d(TAG, "User found: ${user.name}, uid=$uid, online=${user.isOnline}")
                             callback(true, user, uid)
                             return
                         }
@@ -50,6 +50,54 @@ class GetAuthController(private val context: Context) {
             override fun onCancelled(error: DatabaseError) {
                 Log.e(TAG, "Database error: ${error.message}")
                 callback(false, null, null)
+            }
+        })
+    }
+
+    // --- Update profile by token ---
+    fun updateUserProfileByToken(
+        token: String,
+        name: String? = null,
+        email: String? = null,
+        isOnline: Boolean? = null,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        Log.d(TAG, "Updating user profile with token: $token")
+
+        val query = database.child("Users").orderByChild("token").equalTo(token)
+        query.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (snapshot.exists()) {
+                    for (userSnap in snapshot.children) {
+                        val uid = userSnap.key
+                        if (uid != null) {
+                            val updates = mutableMapOf<String, Any>()
+                            name?.let { updates["name"] = it }
+                            email?.let { updates["email"] = it }
+                            isOnline?.let { updates["isOnline"] = it }
+                            updates["updatedTime"] = System.currentTimeMillis()
+
+                            database.child("Users").child(uid).updateChildren(updates)
+                                .addOnSuccessListener {
+                                    Log.d(TAG, "User profile updated successfully")
+                                    callback(true, "Profile updated")
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.e(TAG, "Update failed: ${e.message}")
+                                    callback(false, "Update failed: ${e.message}")
+                                }
+                            return
+                        }
+                    }
+                    callback(false, "User not found")
+                } else {
+                    callback(false, "User not found")
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e(TAG, "Database error: ${error.message}")
+                callback(false, "Database error: ${error.message}")
             }
         })
     }

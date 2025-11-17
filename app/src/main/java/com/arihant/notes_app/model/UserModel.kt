@@ -12,12 +12,13 @@ package com.arihant.notes_app.model
  * Project: notes_app
  * Package: com.arihant.notes_app.model
  */
-data class UserModel (
-
+data class UserModel(
     val uid: String = "",
     val name: String = "",
     val email: String = "",
     val token: String = "",
     val createdTime: Long = 0L,
     val updatedTime: Long = 0L,
+    val isOnline: Boolean = false
 )
+
