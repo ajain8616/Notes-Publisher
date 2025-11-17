@@ -25,6 +25,7 @@
         android:padding="15dp">
 
         <!-- User Details Section -->
+        <!-- User Details Section -->
         <RelativeLayout
             android:id="@+id/layoutUserDetails"
             android:layout_width="match_parent"
@@ -71,16 +72,40 @@
                     android:textSize="12sp" />
             </LinearLayout>
 
+            <!-- Online Status Indicator -->
+            <RelativeLayout
+                android:id="@+id/onlineStatusIndicator"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:layout_toStartOf="@+id/arrowIndicator"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/status_indicator_bg"
+                android:backgroundTint="@color/forest_green" />
+
+            <TextView
+                android:id="@+id/onlineStatusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toStartOf="@id/onlineStatusIndicator"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="4dp"
+                android:fontFamily="@font/roboto_regular"
+                android:text="Online"
+                android:textColor="@color/forest_green"
+                android:textSize="10sp" />
+
             <ImageView
+                android:id="@+id/arrowIndicator"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:layout_marginEnd="16dp"
                 android:src="@drawable/ic_arrow_right"
-                android:tint="@color/slate_gray" />
-        </RelativeLayout>
+                app:tint="@color/slate_gray" />
 
+        </RelativeLayout>
         <!-- Download Data Section -->
         <RelativeLayout
             android:id="@+id/layoutDownloadData"
@@ -100,7 +125,7 @@
                 android:layout_centerVertical="true"
                 android:layout_marginEnd="12dp"
                 android:src="@drawable/ic_report"
-                android:tint="@color/forest_green" />
+                app:tint="@color/forest_green" />
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -134,7 +159,7 @@
                 android:layout_centerVertical="true"
                 android:layout_marginEnd="16dp"
                 android:src="@drawable/ic_arrow_right"
-                android:tint="@color/slate_gray" />
+                app:tint="@color/slate_gray" />
         </RelativeLayout>
 
         <!-- App Preferences Section -->
@@ -190,7 +215,7 @@
                 android:layout_centerVertical="true"
                 android:layout_marginEnd="16dp"
                 android:src="@drawable/ic_arrow_right"
-                android:tint="@color/slate_gray" />
+                app:tint="@color/slate_gray" />
         </RelativeLayout>
 
         <!-- Logout Section (NO tint changes) -->

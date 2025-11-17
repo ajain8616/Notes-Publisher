@@ -1,9 +1,9 @@
 package com.arihant.notes_app.fragments
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.os.Bundle
 import android.os.Handler
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,11 +20,11 @@ import com.arihant.notes_app.adapters.NotesTypeAdapter
 import com.arihant.notes_app.firebase_controller.auth.GetAuthController
 import com.arihant.notes_app.firebase_controller.notes_data_handler.notes_events.NotesEventsController
 import com.arihant.notes_app.model.NotesTypeModel
+import com.arihant.notes_app.model.SharedViewModel
+import com.arihant.notes_app.utils.NetworkChecker
 import com.google.android.material.button.MaterialButton
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.fragment.app.commit
-import com.arihant.notes_app.model.SharedViewModel
-import com.google.firebase.firestore.FirebaseFirestore
 
 class HomeFragment : Fragment() {
 
@@ -36,11 +36,14 @@ class HomeFragment : Fragment() {
     private lateinit var notesController: NotesEventsController
     private lateinit var userId: String
     private val sharedViewModel: SharedViewModel by activityViewModels()
-
-    private val db = FirebaseFirestore.getInstance()
+    private lateinit var networkChecker: NetworkChecker
+    private var userToken: String? = null
 
     @SuppressLint("SetTextI18n")
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
 
         val view = inflater.inflate(R.layout.fragment_home, container, false)
 
@@ -61,12 +64,14 @@ class HomeFragment : Fragment() {
         swipeRefreshLayout.setOnRefreshListener {
             refreshNotes()
         }
-        val prefs = requireActivity().getSharedPreferences("user_prefs", 0)
-        val token = prefs.getString("user_token", null)
 
-        if (token != null) {
+        // Get user token from SharedPreferences
+        val prefs = requireActivity().getSharedPreferences("user_prefs", 0)
+        userToken = prefs.getString("user_token", null)
+
+        if (userToken != null) {
             val authController = GetAuthController(requireContext())
-            authController.getUserProfileByToken(token) { success, user, uid ->
+            authController.getUserProfileByToken(userToken!!) { success, user, uid ->
                 if (success && user != null && uid != null) {
                     userName = user.name
                     userId = uid
@@ -87,31 +92,36 @@ class HomeFragment : Fragment() {
             showSearchDialog()
         }
 
+        // Initialize NetworkChecker
+        val authController = GetAuthController(requireContext())
+        networkChecker = NetworkChecker(requireActivity(), authController, userToken)
+        networkChecker.startChecking()
+        networkChecker.startChecking()
+
         return view
     }
 
-    // ------------ FETCH CATEGORIES + NOTES COUNT ------------------
+    override fun onPause() {
+        super.onPause()
+        networkChecker.stopChecking() // Stop monitoring when fragment is paused
+    }
 
+    // ---------------- FETCH CATEGORIES + NOTES COUNT ------------------
     private fun fetchCategories(uid: String) {
         notesController.getCategories(uid, { categories ->
-
             notesList.clear()
             notesList.addAll(categories)
-
             sortNotesList()
             notesAdapter.notifyDataSetChanged()
-
         }, { exception ->
             Toast.makeText(requireContext(), "Failed to load categories: ${exception.message}", Toast.LENGTH_SHORT).show()
         })
     }
 
     private fun refreshNotes() {
-        val prefs = requireActivity().getSharedPreferences("user_prefs", 0)
-        val token = prefs.getString("user_token", null)
-        if (token != null) {
+        if (userToken != null) {
             val authController = GetAuthController(requireContext())
-            authController.getUserProfileByToken(token) { success, user, uid ->
+            authController.getUserProfileByToken(userToken!!) { success, user, uid ->
                 if (success && uid != null) {
                     fetchCategories(uid)
                 }
@@ -120,8 +130,7 @@ class HomeFragment : Fragment() {
         swipeRefreshLayout.isRefreshing = false
     }
 
-    // -------------------- ADD CATEGORY DIALOG ---------------------
-
+    // ---------------- ADD CATEGORY DIALOG ---------------------
     @SuppressLint("NotifyDataSetChanged")
     private fun showAddCategoryDialog() {
         val dialog = android.app.Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen)
@@ -136,29 +145,19 @@ class HomeFragment : Fragment() {
 
         btnSaveCategory.setOnClickListener {
             val title = edtCategoryTitle.text.toString().trim()
-
             if (title.isEmpty()) {
                 Toast.makeText(requireContext(), "Please enter category name", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            val newCategory = NotesTypeModel(
-                id = "",
-                title = title,
-                filesCount = 0,
-                icon = "ic_others"
-            )
-
+            val newCategory = NotesTypeModel(id = "", title = title, filesCount = 0, icon = "ic_others")
             notesList.add(newCategory)
             sortNotesList()
             notesAdapter.notifyDataSetChanged()
 
-            val prefs = requireActivity().getSharedPreferences("user_prefs", 0)
-            val token = prefs.getString("user_token", null)
-
-            if (token != null) {
+            if (userToken != null) {
                 val authController = GetAuthController(requireContext())
-                authController.getUserProfileByToken(token) { success, user, uid ->
+                authController.getUserProfileByToken(userToken!!) { success, user, uid ->
                     if (success && uid != null) {
                         notesController.addCategory(uid, newCategory, { generatedId ->
                             newCategory.id = generatedId
@@ -172,12 +171,10 @@ class HomeFragment : Fragment() {
             }
             dialog.dismiss()
         }
-
         dialog.show()
     }
 
-    // --------------------- SEARCH DIALOG ------------------------
-
+    // ---------------- SEARCH DIALOG ------------------------
     @SuppressLint("NotifyDataSetChanged")
     private fun showSearchDialog() {
         val dialog = android.app.Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen)
@@ -198,26 +195,19 @@ class HomeFragment : Fragment() {
 
         btnSearch.setOnClickListener {
             val query = edtSearch.text.toString().trim()
-
             if (query.isEmpty()) {
                 Toast.makeText(requireContext(), "Enter something to search", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            val filtered = notesList.filter {
-                it.title.contains(query, ignoreCase = true)
-            }
-
+            val filtered = notesList.filter { it.title.contains(query, ignoreCase = true) }
             if (filtered.isEmpty()) {
                 Toast.makeText(requireContext(), "No result found", Toast.LENGTH_SHORT).show()
             } else {
                 notesAdapter.updateList(filtered)
             }
 
-            Handler().postDelayed({
-                resetNotesList()
-            }, 5000)
-
+            Handler().postDelayed({ resetNotesList() }, 5000)
             dialog.dismiss()
         }
 
@@ -232,10 +222,8 @@ class HomeFragment : Fragment() {
         notesList.sortBy { it.title.lowercase() }
     }
 
-    // --------------------- OPEN ADD NOTES -----------------------
-
+    // ---------------- OPEN ADD NOTES -----------------------
     private fun openAddNotesFragment(category: NotesTypeModel) {
-
         sharedViewModel.setCategory(category.title)
         sharedViewModel.setCategoryId(category.id)
         sharedViewModel.setUid(userId)

@@ -5,12 +5,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.viewpager2.widget.ViewPager2
 import com.arihant.notes_app.R
 import com.arihant.notes_app.adapters.FragmentAdapter
+import com.arihant.notes_app.firebase_controller.auth.GetAuthController
+import com.arihant.notes_app.utils.NetworkChecker
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var viewPager: ViewPager2
     private lateinit var bottomNavigation: BottomNavigationView
+    private lateinit var authController: GetAuthController
+    private lateinit var networkChecker: NetworkChecker
+    private var userToken: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -19,6 +24,14 @@ class MainActivity : AppCompatActivity() {
         initViews()
         setupViewPager()
         setupBottomNavigation()
+
+        // Initialize Firebase auth controller
+        authController = GetAuthController(this)
+        userToken = intent.getStringExtra("user_token") // get token from intent
+
+        // Start network monitoring
+        networkChecker = NetworkChecker(this, authController, userToken)
+        networkChecker.startChecking()
     }
 
     private fun initViews() {
@@ -56,5 +69,11 @@ class MainActivity : AppCompatActivity() {
                 else -> false
             }
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Stop network monitoring when activity is paused
+        networkChecker.stopChecking()
     }
 }

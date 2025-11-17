@@ -101,4 +101,19 @@ class GetAuthController(private val context: Context) {
             }
         })
     }
+
+    // Add this to your GetAuthController class
+    fun observeUserOnlineStatus(uid: String, onStatusChange: (Boolean) -> Unit) {
+        database.child("Users").child(uid).child("isOnline")
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val isOnline = snapshot.getValue(Boolean::class.java) ?: false
+                    onStatusChange(isOnline)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e(TAG, "Failed to observe online status: ${error.message}")
+                }
+            })
+    }
 }

@@ -6,12 +6,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.arihant.notes_app.R
 import com.arihant.notes_app.adapters.StickyNotesAdapter
+import com.arihant.notes_app.firebase_controller.auth.GetAuthController
 import com.arihant.notes_app.model.StickyNote
+import com.arihant.notes_app.utils.NetworkChecker
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -24,6 +26,8 @@ class ReportFragment : Fragment() {
 
     private lateinit var db: FirebaseFirestore
     private var userId: String? = null
+    private var userToken: String? = null
+    private lateinit var networkChecker: NetworkChecker
 
     companion object {
         private const val TAG = "ReportFragment"
@@ -43,8 +47,23 @@ class ReportFragment : Fragment() {
         swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout)
 
         db = FirebaseFirestore.getInstance()
+
+        // Get user token from SharedPreferences
+        val prefs = requireActivity().getSharedPreferences("user_prefs", 0)
+        userToken = prefs.getString("user_token", null)
+
+        // Initialize NetworkChecker
+        val authController = GetAuthController(requireContext())
+        networkChecker = NetworkChecker(requireActivity(), authController, userToken)
+        networkChecker.startChecking()
+
         setupSwipeToRefresh()
         getCurrentUserAndLoadNotes()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        networkChecker.stopChecking() // Stop monitoring when fragment is paused
     }
 
     private fun setupSwipeToRefresh() {
@@ -129,6 +148,7 @@ class ReportFragment : Fragment() {
             }
             .addOnFailureListener {
                 swipeRefreshLayout.isRefreshing = false
+                Toast.makeText(requireContext(), "Failed to load categories!", Toast.LENGTH_SHORT).show()
             }
     }
 
@@ -137,7 +157,6 @@ class ReportFragment : Fragment() {
         sortNotesList()
         setupNotesRecycler()
     }
-
 
     private fun setupNotesRecycler() {
         if (!::notesAdapter.isInitialized) {
@@ -154,7 +173,4 @@ class ReportFragment : Fragment() {
         originalNotesList.sortBy { it.message.lowercase() }
         originalNotesList.reverse()
     }
-
-
-
 }

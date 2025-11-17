@@ -1,17 +1,13 @@
 package com.arihant.notes_app.activities
 
-import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.animation.doOnEnd
@@ -19,6 +15,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.arihant.notes_app.R
 import com.arihant.notes_app.firebase_controller.auth.GetAuthController
+import com.arihant.notes_app.utils.NetworkChecker
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.google.firebase.FirebaseApp
 
@@ -30,11 +27,12 @@ class SplashActivity : AppCompatActivity() {
     private lateinit var loadingProgress: LinearProgressIndicator
     private lateinit var versionInfo: TextView
     private lateinit var authController: GetAuthController
-
-    private val splashDelay: Long = 3500
+    private lateinit var prefs: SharedPreferences
 
     private var userToken: String? = null
-    private lateinit var prefs: SharedPreferences
+    private lateinit var networkChecker: NetworkChecker
+
+    private val splashDelay: Long = 3500
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,10 +49,15 @@ class SplashActivity : AppCompatActivity() {
         FirebaseApp.initializeApp(this)
         authController = GetAuthController(this)
 
+        // Initialize NetworkChecker
+        networkChecker = NetworkChecker(this, authController, userToken)
+        networkChecker.startChecking() // start monitoring network status
+
         startSplashAnimation()
 
+        // Delay to handle next activity after splash animation
         Handler(Looper.getMainLooper()).postDelayed({
-            handleUserStatus()
+            decideNextActivity()
         }, splashDelay)
     }
 
@@ -92,7 +95,6 @@ class SplashActivity : AppCompatActivity() {
         )
         flipInAnimator.setTarget(appLogo)
         flipInAnimator.start()
-
         flipInAnimator.doOnEnd { showAppName() }
     }
 
@@ -117,40 +119,11 @@ class SplashActivity : AppCompatActivity() {
     private fun showLoadingElements() {
         loadingProgress.visibility = View.VISIBLE
         versionInfo.visibility = View.VISIBLE
-
         loadingProgress.animate().alpha(1f).setDuration(600).start()
         versionInfo.animate().alpha(1f).setDuration(600).start()
     }
 
-    private fun handleUserStatus() {
-        if (!isOnline()) {
-            showOfflineMessage()
-            decideNextActivity(isOffline = true)
-        } else {
-            userToken?.let { token ->
-                authController.getUserProfileByToken(token) { success, user, uid ->
-                    if (success && user != null && uid != null) {
-                        authController.updateUserProfileByToken(token, isOnline = true) { updateSuccess, message ->
-                            if (updateSuccess) {
-                                Toast.makeText(this, "Status Updated", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-                            }
-                            decideNextActivity(isOffline = false)
-                        }
-                    } else {
-                        // If user not found, proceed
-                        decideNextActivity(isOffline = false)
-                    }
-                }
-            } ?: run {
-                // No token, go to login/signup
-                decideNextActivity(isOffline = false)
-            }
-        }
-    }
-
-    private fun decideNextActivity(isOffline: Boolean) {
+    private fun decideNextActivity() {
         val isLoggedIn = prefs.getBoolean("is_logged_in", false)
         val isRegistered = prefs.getBoolean("is_registered", false)
         userToken = prefs.getString("user_token", null)
@@ -163,29 +136,13 @@ class SplashActivity : AppCompatActivity() {
         }
 
         nextIntent.putExtra("user_token", userToken)
-        nextIntent.putExtra("is_offline", isOffline)
         startActivity(nextIntent)
         overridePendingTransition(R.animator.slide_in_right, R.animator.slide_out_left)
         finish()
     }
 
-    private fun isOnline(): Boolean {
-        val connectivityManager =
-            getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val network = connectivityManager.activeNetwork ?: return false
-        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
-    }
-
-    private fun showOfflineMessage() {
-        versionInfo.text = "You are offline"
-        versionInfo.visibility = View.VISIBLE
-    }
-
     override fun onPause() {
         super.onPause()
-        Handler(Looper.getMainLooper()).removeCallbacksAndMessages(null)
+        networkChecker.stopChecking() // stop network monitoring
     }
 }

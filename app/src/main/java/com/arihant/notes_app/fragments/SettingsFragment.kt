@@ -9,6 +9,8 @@ import android.content.res.ColorStateList
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.os.Environment
 import android.view.LayoutInflater
@@ -40,6 +42,8 @@ class SettingsFragment : Fragment() {
 
     private lateinit var txtUserName: TextView
     private lateinit var txtUserEmail: TextView
+    private lateinit var onlineStatusIndicator: RelativeLayout
+    private lateinit var onlineStatusText: TextView
 
     private var isOnline: Boolean = true
     private var currentTheme: String = "default"
@@ -63,6 +67,8 @@ class SettingsFragment : Fragment() {
 
         txtUserName = view.findViewById(R.id.textUserName)
         txtUserEmail = view.findViewById(R.id.textUserEmail)
+        onlineStatusIndicator = view.findViewById(R.id.onlineStatusIndicator)
+        onlineStatusText = view.findViewById(R.id.onlineStatusText)
 
         val prefs = requireActivity().getSharedPreferences("user_prefs", 0)
         token = prefs.getString("user_token", null)
@@ -72,6 +78,9 @@ class SettingsFragment : Fragment() {
             redirectToLogin()
             return view
         }
+
+        // Check network status immediately
+        checkNetworkStatus()
 
         loadUserProfile(token!!)
         if (uid != null) startTokenListener(uid!!, token!!)
@@ -94,10 +103,64 @@ class SettingsFragment : Fragment() {
     }
 
     // -----------------------------------------------------
+    // ONLINE/OFFLINE STATUS HANDLER
+    // -----------------------------------------------------
+
+    private fun updateOnlineStatus(isOnline: Boolean) {
+        this.isOnline = isOnline
+
+        val context = requireContext()
+
+        if (isOnline) {
+            // Online status - Green theme
+            onlineStatusIndicator.backgroundTintList =
+                ColorStateList.valueOf(ContextCompat.getColor(context, R.color.forest_green))
+            onlineStatusText.text = "Online"
+            onlineStatusText.setTextColor(ContextCompat.getColor(context, R.color.forest_green))
+        } else {
+            // Offline status - Red theme
+            onlineStatusIndicator.backgroundTintList =
+                ColorStateList.valueOf(ContextCompat.getColor(context, R.color.colorError))
+            onlineStatusText.text = "Offline"
+            onlineStatusText.setTextColor(ContextCompat.getColor(context, R.color.colorError))
+        }
+    }
+
+    // -----------------------------------------------------
+    // NETWORK CONNECTIVITY CHECK
+    // -----------------------------------------------------
+
+    private fun isOnline(): Boolean {
+        val connectivityManager =
+            requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+    }
+
+    private fun checkNetworkStatus() {
+        val isConnected = isOnline()
+        updateOnlineStatus(isConnected)
+
+        if (!isConnected) {
+            Toast.makeText(requireContext(), "You are currently offline", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // -----------------------------------------------------
     // PERMISSION HANDLER
     // -----------------------------------------------------
 
     private fun requestDownloadPermission() {
+        // Check network status before requesting permission
+        if (!isOnline()) {
+            Toast.makeText(requireContext(), "No internet connection. Cannot download data.", Toast.LENGTH_SHORT).show()
+            updateOnlineStatus(false)
+            return
+        }
+
         if (ContextCompat.checkSelfPermission(
                 requireContext(),
                 Manifest.permission.WRITE_EXTERNAL_STORAGE
@@ -122,40 +185,101 @@ class SettingsFragment : Fragment() {
             grantResults.isNotEmpty() &&
             grantResults[0] == PackageManager.PERMISSION_GRANTED
         ) {
-            showDownloadDataConfirmationDialog()
+            // Check network status again before proceeding with download
+            if (isOnline()) {
+                showDownloadDataConfirmationDialog()
+            } else {
+                Toast.makeText(requireContext(), "No internet connection. Cannot download data.", Toast.LENGTH_SHORT).show()
+                updateOnlineStatus(false)
+            }
         } else {
             Toast.makeText(requireContext(), "Permission denied", Toast.LENGTH_SHORT).show()
         }
     }
 
     // -----------------------------------------------------
-    // AUTH
-    // -----------------------------------------------------
+// AUTH - Improved online status handling
+// -----------------------------------------------------
 
     private fun loadUserProfile(token: String) {
+        // First check device network connectivity
+        val deviceOnline = isOnline()
+
+        if (!deviceOnline) {
+            Toast.makeText(requireContext(), "No internet connection. Using cached data.", Toast.LENGTH_SHORT).show()
+            updateOnlineStatus(false)
+            return
+        }
+
         getAuthController.getUserProfileByToken(token) { success, user, fetchedUid ->
             if (success && user != null) {
-
                 txtUserName.text = user.name
                 txtUserEmail.text = user.email
                 uid = fetchedUid
-                isOnline = user.isOnline
+
+                // Update online status - prioritize database status but consider device connectivity
+                val finalOnlineStatus = deviceOnline && user.isOnline
+                updateOnlineStatus(finalOnlineStatus)
+
+                if (finalOnlineStatus) {
+                    Toast.makeText(requireContext(), "Profile loaded - Online", Toast.LENGTH_SHORT).show()
+                    startOnlineStatusListener(fetchedUid ?: uid ?: "")
+
+                } else {
+                    val reason = if (!deviceOnline) "Device offline" else "User marked as offline in system"
+                    Toast.makeText(requireContext(), "Profile loaded - Offline ($reason)", Toast.LENGTH_SHORT).show()
+                }
 
             } else {
                 Toast.makeText(requireContext(), "User not found!", Toast.LENGTH_LONG).show()
+                // If user not found, use device connectivity status
+                updateOnlineStatus(deviceOnline)
+            }
+        }
+    }
+
+    private fun startOnlineStatusListener(uid: String) {
+        getAuthController.observeUserOnlineStatus(uid) { isOnline ->
+            // Update UI with real-time online status from database
+            updateOnlineStatus(isOnline && isOnline())
+
+            if (isOnline) {
+                onlineStatusText.text = "Online"
+                Toast.makeText(requireContext(), "You're now online", Toast.LENGTH_SHORT).show()
+            } else {
+                onlineStatusText.text = "Offline"
+                Toast.makeText(requireContext(), "You're now offline", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun startTokenListener(uid: String, token: String) {
+        // Only start token listener if online
+        if (!isOnline()) {
+            updateOnlineStatus(false)
+            return
+        }
+
         authController.observeTokenChanges(uid, token) { reason ->
             Toast.makeText(requireContext(), reason, Toast.LENGTH_LONG).show()
+
+            // When token is invalid, set status to offline
+            updateOnlineStatus(false)
             redirectToLogin()
         }
     }
 
     private fun logoutUser() {
         val tokenValue = token ?: return
+
+        // Update online status to false before logging out
+        updateOnlineStatus(false)
+
+        // Check if online before attempting logout
+        if (!isOnline()) {
+            Toast.makeText(requireContext(), "No internet connection. Cannot logout.", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         authController.logoutUser(tokenValue) { success, message ->
             Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
@@ -185,7 +309,7 @@ class SettingsFragment : Fragment() {
     }
 
     // -------------------------
-    // PROFILE UPDATE DIALOG
+    // PROFILE UPDATE DIALOG - Updated to handle online status
     // -------------------------
 
     private fun showProfileUpdateDialog() {
@@ -202,6 +326,18 @@ class SettingsFragment : Fragment() {
         val edtEmail = dialog.findViewById<TextInputEditText>(R.id.edtProfileEmail)
         val btnUpdate = dialog.findViewById<MaterialButton>(R.id.btnProfileUpdate)
 
+        // Add online status indicator in dialog if available
+        val onlineStatusDialog = dialog.findViewById<TextView>(R.id.onlineStatusText)
+        if (onlineStatusDialog != null) {
+            onlineStatusDialog.text = if (isOnline) "Online" else "Offline"
+            onlineStatusDialog.setTextColor(
+                if (isOnline)
+                    ContextCompat.getColor(requireContext(), R.color.forest_green)
+                else
+                    ContextCompat.getColor(requireContext(), R.color.colorError)
+            )
+        }
+
         edtName.setText(txtUserName.text)
         edtEmail.setText(txtUserEmail.text)
 
@@ -216,14 +352,23 @@ class SettingsFragment : Fragment() {
                 return@setOnClickListener
             }
 
+            // Check if online before updating
+            if (!isOnline()) {
+                Toast.makeText(requireContext(), "Cannot update profile while offline", Toast.LENGTH_SHORT).show()
+                updateOnlineStatus(false)
+                return@setOnClickListener
+            }
+
             getAuthController.updateUserProfileByToken(token!!, name, email) { success, message ->
                 if (success) {
                     txtUserName.text = name
                     txtUserEmail.text = email
-                    Toast.makeText(requireContext(), "Updated", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Profile Updated", Toast.LENGTH_SHORT).show()
                     dialog.dismiss()
                 } else {
                     Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                    // If update fails, check if we're still online
+                    updateOnlineStatus(false)
                 }
             }
         }
@@ -255,6 +400,14 @@ class SettingsFragment : Fragment() {
 
         btnConfirm.setOnClickListener {
             dialog.dismiss()
+
+            // Final network check before downloading
+            if (!isOnline()) {
+                Toast.makeText(requireContext(), "No internet connection. Cannot download data.", Toast.LENGTH_SHORT).show()
+                updateOnlineStatus(false)
+                return@setOnClickListener
+            }
+
             downloadUserData()
         }
 
@@ -285,6 +438,14 @@ class SettingsFragment : Fragment() {
 
         btnConfirm.setOnClickListener {
             dialog.dismiss()
+
+            // Check network status before logout
+            if (!isOnline()) {
+                Toast.makeText(requireContext(), "No internet connection. Cannot logout.", Toast.LENGTH_SHORT).show()
+                updateOnlineStatus(false)
+                return@setOnClickListener
+            }
+
             logoutUser()
         }
 
@@ -369,6 +530,13 @@ class SettingsFragment : Fragment() {
     // DOWNLOAD PDF
     // -----------------------------------------------------
     private fun downloadUserData() {
+        // Check if online before downloading
+        if (!isOnline()) {
+            Toast.makeText(requireContext(), "Cannot download data while offline", Toast.LENGTH_SHORT).show()
+            updateOnlineStatus(false)
+            return
+        }
+
         val db = FirebaseFirestore.getInstance()
         val userId = uid ?: return
 
@@ -573,6 +741,8 @@ class SettingsFragment : Fragment() {
             .addOnFailureListener { e ->
                 hideLoading()
                 showMessage("Failed to load data: ${e.localizedMessage}")
+                // If download fails, check online status
+                updateOnlineStatus(false)
             }
     }
 
@@ -777,5 +947,4 @@ class SettingsFragment : Fragment() {
     private fun showMessage(message: String) {
         Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
     }
-
 }

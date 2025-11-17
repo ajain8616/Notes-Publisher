@@ -16,9 +16,11 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.arihant.notes_app.R
 import com.arihant.notes_app.adapters.NotesAdapter
+import com.arihant.notes_app.firebase_controller.auth.GetAuthController
 import com.arihant.notes_app.firebase_controller.notes_data_handler.notes_events.NotesEventsController
 import com.arihant.notes_app.model.NotesModel
 import com.arihant.notes_app.model.SharedViewModel
+import com.arihant.notes_app.utils.NetworkChecker
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 
@@ -37,7 +39,7 @@ class AddNotesFragment : Fragment() {
     private lateinit var edtEditNoteTitle: TextInputEditText
     private lateinit var edtEditNoteDesc: TextInputEditText
     private lateinit var btnUpdateNote: MaterialButton
-
+    private var userToken: String? = null
 
     private val sharedViewModel: SharedViewModel by activityViewModels()
     private val notesEventsController = NotesEventsController()
@@ -49,13 +51,13 @@ class AddNotesFragment : Fragment() {
     private val notesList = mutableListOf<NotesModel>()
     private lateinit var notesAdapter: NotesAdapter
 
+    private lateinit var networkChecker: NetworkChecker
     private val TAG = "AddNotesFragment"
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-
         val view = inflater.inflate(R.layout.fragment_add_notes, container, false)
 
         Log.d(TAG, "Initializing views...")
@@ -96,11 +98,23 @@ class AddNotesFragment : Fragment() {
             Log.d(TAG, "Back button clicked. Navigating back.")
             requireActivity().onBackPressed()
         }
-        searchBtn.setOnClickListener {
-            showSearchDialog()
-        }
+
+        searchBtn.setOnClickListener { showSearchDialog() }
+
+        // Initialize NetworkChecker
+        val authController = GetAuthController(requireContext())
+        // Get user token from SharedPreferences
+        val prefs = requireActivity().getSharedPreferences("user_prefs", 0)
+        userToken = prefs.getString("user_token", null)
+        networkChecker = NetworkChecker(requireActivity(), authController, userToken)
+        networkChecker?.startChecking()
 
         return view
+    }
+
+    override fun onPause() {
+        super.onPause()
+        networkChecker.stopChecking() // Stop monitoring when fragment is paused
     }
 
     private fun initViews(view: View) {
@@ -117,7 +131,6 @@ class AddNotesFragment : Fragment() {
         edtEditNoteTitle = view.findViewById(R.id.edtEditNoteTitle)
         edtEditNoteDesc = view.findViewById(R.id.edtEditNoteDesc)
         btnUpdateNote = view.findViewById(R.id.btnUpdateNote)
-
     }
 
     private fun setupRecycler() {
@@ -127,23 +140,17 @@ class AddNotesFragment : Fragment() {
             onEditClick = { note -> editNote(note) },
             onDeleteClick = { note -> showDeleteConfirmationDialog(note) }
         )
-
         notesRecycler.layoutManager = LinearLayoutManager(requireContext())
         notesRecycler.adapter = notesAdapter
     }
 
     private fun loadNotes() {
-        if (categoryId.isEmpty() || uid.isEmpty()) {
-            Log.e(TAG, "Cannot load notes. CategoryId or UID is empty.")
-            return
-        }
-
+        if (categoryId.isEmpty() || uid.isEmpty()) return
         Log.d(TAG, "Fetching notes for uid=$uid, categoryId=$categoryId...")
         notesEventsController.getNotesBasedOnCategory(
             uid,
             categoryId,
             onSuccess = { notes ->
-                Log.d(TAG, "Notes fetched successfully. Count: ${notes.size}")
                 notesList.clear()
                 notesList.addAll(notes)
                 sortNotesList()
@@ -152,21 +159,16 @@ class AddNotesFragment : Fragment() {
                 }
             },
             onFailure = {
-                Log.e(TAG, "Failed to load notes!")
                 Toast.makeText(requireContext(), "Failed to load notes!", Toast.LENGTH_SHORT).show()
             }
         )
-
     }
 
     private fun saveNote() {
         val title = edtNoteTitle.text.toString().trim()
         val desc = edtNoteDesc.text.toString().trim()
 
-        Log.d(TAG, "Save note clicked. Title: $title, Description: $desc")
-
         if (title.isEmpty() || desc.isEmpty()) {
-            Log.w(TAG, "Title or description is empty.")
             Toast.makeText(requireContext(), "Enter title and description", Toast.LENGTH_SHORT).show()
             return
         }
@@ -183,14 +185,11 @@ class AddNotesFragment : Fragment() {
             updatedAt = timestamp
         )
 
-        Log.d(TAG, "Adding new note to Firestore: $newNote")
-
         notesEventsController.addNoteBasedOnCategory(
             uid,
             categoryId,
             newNote,
             onSuccess = {
-                Log.d(TAG, "Note added successfully.")
                 sortNotesList()
                 Toast.makeText(requireContext(), "Note added!", Toast.LENGTH_SHORT).show()
                 edtNoteTitle.setText("")
@@ -200,23 +199,17 @@ class AddNotesFragment : Fragment() {
                 loadNotes()
             },
             onFailure = {
-                Log.e(TAG, "Failed to add note.")
                 Toast.makeText(requireContext(), "Failed to add!", Toast.LENGTH_SHORT).show()
             }
         )
     }
 
     private fun editNote(note: NotesModel) {
-        Log.d(TAG, "Editing note: ${note.id} - ${note.title}")
-
         edtEditNoteTitle.setText(note.title)
         edtEditNoteDesc.setText(note.description)
-
-
         editNotesCard.visibility = View.VISIBLE
         addNotesCard.visibility = View.GONE
         notesRecycler.visibility = View.GONE
-
 
         btnUpdateNote.setOnClickListener {
             val newTitle = edtEditNoteTitle.text.toString().trim()
@@ -273,7 +266,6 @@ class AddNotesFragment : Fragment() {
 
         btnSearch.setOnClickListener {
             val query = edtSearch.text.toString().trim()
-
             if (query.isEmpty()) {
                 Toast.makeText(requireContext(), "Enter something to search", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -287,16 +279,12 @@ class AddNotesFragment : Fragment() {
                 notesAdapter.updateList(filtered)
             }
 
-            android.os.Handler().postDelayed({
-                resetNotesList()
-            }, 5000)
-
+            android.os.Handler().postDelayed({ resetNotesList() }, 5000)
             dialog.dismiss()
         }
 
         dialog.show()
     }
-
 
     private fun sortNotesList() {
         notesList.sortBy { it.title.lowercase() }
@@ -309,9 +297,8 @@ class AddNotesFragment : Fragment() {
 
         val mainCard: View = dialog.findViewById(R.id.dialog_card)
         val searchCard: View = dialog.findViewById(R.id.search_card)
-
-        val permissionCard: View = dialog.findViewById(R.id.permission_card) // Assuming this exists in XML
-        val txtTitle: TextView = dialog.findViewById(R.id.permissionTitle) // Add these IDs in XML
+        val permissionCard: View = dialog.findViewById(R.id.permission_card)
+        val txtTitle: TextView = dialog.findViewById(R.id.permissionTitle)
         val txtDescription: TextView = dialog.findViewById(R.id.permissionDesc)
         val btnConfirm: MaterialButton = dialog.findViewById(R.id.btnPermissionConfirm)
         val btnCancel: MaterialButton = dialog.findViewById(R.id.btnPermissionCancel)
@@ -320,7 +307,6 @@ class AddNotesFragment : Fragment() {
         searchCard.visibility = View.GONE
         permissionCard.visibility = View.VISIBLE
 
-        // Set note info
         txtTitle.text = note.title
         txtDescription.text = note.description
 
@@ -332,23 +318,24 @@ class AddNotesFragment : Fragment() {
 
         dialog.show()
     }
-    private fun performDeleteNote(note: NotesModel) {
-        Log.d(TAG, "Deleting note: ${note.id} - ${note.title}")
 
+    private fun performDeleteNote(note: NotesModel) {
         notesEventsController.deleteNoteBasedOnCategory(
             uid,
             categoryId,
             note.id,
             onSuccess = {
-                Log.d(TAG, "Note deleted successfully.")
                 Toast.makeText(requireContext(), "Deleted!", Toast.LENGTH_SHORT).show()
                 loadNotes()
             },
             onFailure = {
-                Log.e(TAG, "Delete failed for note: ${note.id}")
                 Toast.makeText(requireContext(), "Delete failed!", Toast.LENGTH_SHORT).show()
             }
         )
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        networkChecker?.stopChecking()
+    }
 }
