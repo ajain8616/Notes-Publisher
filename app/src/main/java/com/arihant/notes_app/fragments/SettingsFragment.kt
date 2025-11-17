@@ -79,9 +79,7 @@ class SettingsFragment : Fragment() {
         view.findViewById<RelativeLayout>(R.id.layoutUserDetails).setOnClickListener {
             showProfileUpdateDialog()
         }
-        view.findViewById<RelativeLayout>(R.id.layoutOnlineOffline).setOnClickListener {
-            showOnlineOfflineDialog()
-        }
+
         view.findViewById<RelativeLayout>(R.id.layoutDownloadData).setOnClickListener {
             requestDownloadPermission()
         }
@@ -234,71 +232,6 @@ class SettingsFragment : Fragment() {
     }
 
     // -------------------------
-    // ONLINE/OFFLINE DIALOG
-    // -------------------------
-
-    private fun showOnlineOfflineDialog() {
-        val dialog = getFullScreenDialog()
-
-        dialog.findViewById<View>(R.id.dialog_card)?.visibility = View.GONE
-        dialog.findViewById<View>(R.id.mode_card)?.visibility = View.VISIBLE
-
-        val switchMode = dialog.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchMode)
-        val txtMode = dialog.findViewById<TextView>(R.id.txtMode)
-        val btnApply = dialog.findViewById<MaterialButton>(R.id.btnApplyMode)
-        val btnClose = dialog.findViewById<ImageView>(R.id.btnCloseDialog)
-
-        // Set switch checked state: on for online, off for offline
-        switchMode.isChecked = isOnline
-        txtMode.text = if (switchMode.isChecked) "Online Mode" else "Offline Mode"
-
-        val thumbColors = ColorStateList(
-            arrayOf(
-                intArrayOf(android.R.attr.state_checked),
-                intArrayOf(-android.R.attr.state_checked)
-            ),
-            intArrayOf(
-                requireContext().getColor(R.color.accent_leaf_green),
-                requireContext().getColor(R.color.gray_400)
-            )
-        )
-        val trackColors = ColorStateList(
-            arrayOf(
-                intArrayOf(android.R.attr.state_checked),
-                intArrayOf(-android.R.attr.state_checked)
-            ),
-            intArrayOf(
-                requireContext().getColor(R.color.mist_blue),
-                requireContext().getColor(R.color.gray_200)
-            )
-        )
-        switchMode.thumbTintList = thumbColors
-        switchMode.trackTintList = trackColors
-
-        switchMode.setOnCheckedChangeListener { _, isChecked ->
-            txtMode.text = if (isChecked) "Online Mode" else "Offline Mode"
-        }
-
-        btnClose.setOnClickListener { dialog.dismiss() }
-
-        btnApply.setOnClickListener {
-            val newStatus = switchMode.isChecked
-
-            getAuthController.updateUserProfileByToken(token!!, isOnline = newStatus) { success, message ->
-                if (success) {
-                    isOnline = newStatus
-                    Toast.makeText(requireContext(), "Status Updated", Toast.LENGTH_SHORT).show()
-                    dialog.dismiss()
-                } else {
-                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-
-        dialog.show()
-    }
-
-    // -------------------------
     // DOWNLOAD CONFIRMATION DIALOG
     // -------------------------
 
@@ -377,7 +310,8 @@ class SettingsFragment : Fragment() {
         themeCard.visibility = View.VISIBLE
 
         // Load the current theme from SharedPreferences
-        val sharedPreferences = requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val sharedPreferences =
+            requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
         currentTheme = sharedPreferences.getString("selected_theme", "default") ?: "default"
 
         // Set the checkboxes based on the loaded currentTheme
@@ -434,116 +368,158 @@ class SettingsFragment : Fragment() {
     // -----------------------------------------------------
     // DOWNLOAD PDF
     // -----------------------------------------------------
-
     private fun downloadUserData() {
         val db = FirebaseFirestore.getInstance()
         val userId = uid ?: return
 
+        showLoading("Preparing your professional report...")
+
         val pdf = PdfDocument()
 
-        // ---- Load Theme Colors ----
-        val colorBg = ContextCompat.getColor(requireContext(), R.color.colorBackground)
-        val colorPrimary = ContextCompat.getColor(requireContext(), R.color.colorPrimary)
-        val colorAccent = ContextCompat.getColor(requireContext(), R.color.accent_leaf_green)
-        val colorDivider = ContextCompat.getColor(requireContext(), R.color.divider_gray)
-        val textMain = ContextCompat.getColor(requireContext(), R.color.dark_charcoal)
-        val textSub = ContextCompat.getColor(requireContext(), R.color.gray_700)
-        val white = ContextCompat.getColor(requireContext(), R.color.white)
+        val colors = mapOf(
+            "primary" to ContextCompat.getColor(requireContext(), R.color.colorPrimary), // forest green
+            "secondary" to ContextCompat.getColor(requireContext(), R.color.colorSecondary), // leaf green
+            "accent" to ContextCompat.getColor(requireContext(), R.color.accent_earth_brown), // accent brown
+            "background" to ContextCompat.getColor(requireContext(), R.color.colorBackground), // soft beige
+            "textPrimary" to ContextCompat.getColor(requireContext(), R.color.dark_charcoal), // dark charcoal
+            "textSecondary" to ContextCompat.getColor(requireContext(), R.color.slate_gray), // slate gray
+            "textTertiary" to ContextCompat.getColor(requireContext(), R.color.soft_gray), // soft gray
+            "white" to ContextCompat.getColor(requireContext(), R.color.colorSurface), // white
+            "shadow" to ContextCompat.getColor(requireContext(), R.color.mist_blue), // mist blue for subtle shadows
+            "error" to ContextCompat.getColor(requireContext(), R.color.colorError) // red error
+        )
 
-        // ---- Title Text ----
-        val titlePaint = Paint().apply {
-            textSize = 24f
-            color = white
-            typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD)
-            textAlign = Paint.Align.CENTER
-        }
+        val paints = createPaints(colors)
 
-        // ---- Header Box Paint ----
-        val titleBarPaint = Paint().apply {
-            color = colorPrimary
-            style = Paint.Style.FILL
-        }
+        val dateFormat = SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault())
+        val currentDate = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()).format(Date())
+        val fileTimestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
 
-        // ---- Category Header Label ----
-        val categoryPaint = Paint().apply {
-            color = colorAccent
-            style = Paint.Style.FILL
-        }
-
-        // ---- Normal Text ----
-        val contentPaint = Paint().apply {
-            textSize = 14f
-            color = textMain
-        }
-
-        // ---- Sub Content / Description ----
-        val descPaint = Paint().apply {
-            textSize = 13f
-            color = textSub
-        }
-
-        // ---- Divider Paint ----
-        val dividerPaint = Paint().apply {
-            color = colorDivider
-            strokeWidth = 1.5f
-        }
-
-        // Date Formatter
-        val dateFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
-
+        val pageWidth = 595
+        val pageHeight = 842
+        val margin = 40f
+        var currentY = margin + 100f
         var pageNumber = 1
-        var pageInfo = PdfDocument.PageInfo.Builder(595, 842, pageNumber).create()
+
+        var pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber).create()
         var page = pdf.startPage(pageInfo)
         var canvas = page.canvas
-        var y = 40f
 
-        fun addPage() {
-            pdf.finishPage(page)
-            pageNumber++
-            pageInfo = PdfDocument.PageInfo.Builder(595, 842, pageNumber).create()
-            page = pdf.startPage(pageInfo)
-            canvas = page.canvas
-            y = 40f
-
-            // Repeat title bar on every page
-            canvas.drawRect(0f, 0f, pageInfo.pageWidth.toFloat(), 60f, titleBarPaint)
-            canvas.drawText("User Notes Report", (pageInfo.pageWidth / 2).toFloat(), 38f, titlePaint)
-            y = 90f
+        fun drawHeader() {
+            canvas.drawRect(0f, 0f, pageWidth.toFloat(), 120f, paints["headerBackground"]!!)
+            canvas.drawText(getString(R.string.app_name), (pageWidth / 2).toFloat(), 50f, paints["title"]!!)
+            canvas.drawText("Professional Notes Report", (pageWidth / 2).toFloat(), 70f, paints["subtitle"]!!)
+            canvas.drawText("Generated on $currentDate", (pageWidth / 2).toFloat(), 90f, paints["metadata"]!!)
+            canvas.drawRect(150f, 100f, 445f, 102f, paints["accent"]!!)
+            canvas.drawText("Page $pageNumber", (pageWidth / 2).toFloat(), pageHeight - 30f, paints["metadataCenter"]!!)
         }
 
-        // ---- Draw Title Bar ----
-        canvas.drawRect(0f, 0f, pageInfo.pageWidth.toFloat(), 60f, titleBarPaint)
-        canvas.drawText("User Notes Report", (pageInfo.pageWidth / 2).toFloat(), 38f, titlePaint)
-        y += 60
+        fun addNewPage() {
+            pdf.finishPage(page)
+            pageNumber++
+            pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber).create()
+            page = pdf.startPage(pageInfo)
+            canvas = page.canvas
+            currentY = margin + 100f
+            drawHeader()
+        }
 
-        // Background fill (optional for aesthetic)
-        canvas.drawColor(colorBg)
+        fun checkPageSpace(requiredHeight: Float) {
+            if (currentY + requiredHeight > pageHeight - 50f) {
+                addNewPage()
+            }
+        }
+
+        fun drawCategoryHeader(categoryName: String, noteCount: Int) {
+            checkPageSpace(60f)
+
+            canvas.drawRoundRect(margin, currentY, pageWidth - margin, currentY + 45f, 8f, 8f, paints["categoryHeader"]!!)
+            canvas.drawCircle(margin + 25f, currentY + 22f, 10f, paints["accent"]!!)
+            canvas.drawText("📁", margin + 20f, currentY + 26f, paints["categoryIcon"]!!)
+            canvas.drawText(categoryName, margin + 45f, currentY + 25f, paints["categoryTitle"]!!)
+            canvas.drawText("$noteCount ${if (noteCount == 1) "note" else "notes"}", margin + 45f, currentY + 40f, paints["categorySubtitle"]!!)
+            currentY += 55f
+        }
+
+        fun drawNoteCard(noteData: Map<String, Any?>, index: Int, totalNotes: Int) {
+            val cardHeight = 120f
+            checkPageSpace(cardHeight + 20f)
+
+            val id = noteData["id"] as? Long ?: 0L
+            val title = noteData["title"] as? String ?: "Untitled Note"
+            val description = noteData["description"] as? String ?: "No description provided"
+            val createdAt = noteData["createdAt"] as? Long ?: System.currentTimeMillis()
+            val updatedAt = noteData["updatedAt"] as? Long ?: createdAt
+
+            canvas.drawRoundRect(margin + 2, currentY + 2, pageWidth - margin - 2, currentY + cardHeight + 2, 8f, 8f, paints["cardShadow"]!!)
+            canvas.drawRoundRect(margin, currentY, pageWidth - margin - 2, currentY + cardHeight, 8f, 8f, paints["cardBackground"]!!)
+            canvas.drawRect(margin, currentY, margin + 8f, currentY + cardHeight, paints["accent"]!!)
+
+            var contentY = currentY + 25f
+
+            canvas.drawRoundRect(margin + 15f, contentY - 12f, margin + 45f, contentY + 2f, 4f, 4f, paints["badge"]!!)
+            canvas.drawText("ID: $id", margin + 18f, contentY - 2f, paints["badgeText"]!!)
+            contentY += 15f
+
+            canvas.drawText(truncateText(title, paints["contentTitle"]!!, pageWidth - 2 * margin - 60f), margin + 15f, contentY, paints["contentTitle"]!!)
+            contentY += 20f
+
+            canvas.drawText("Description:", margin + 15f, contentY, paints["contentLabel"]!!)
+            contentY += 15f
+
+            val descLines = wrapText(description, paints["content"]!!, pageWidth - 2 * margin - 30f)
+            for (line in descLines.take(2)) {
+                canvas.drawText(line, margin + 15f, contentY, paints["content"]!!)
+                contentY += 14f
+            }
+
+            if (descLines.size > 2) {
+                canvas.drawText("...", margin + 15f, contentY, paints["content"]!!)
+                contentY += 14f
+            }
+
+            contentY += 5f
+            canvas.drawText("Created: ${dateFormat.format(Date(createdAt))}", margin + 15f, contentY, paints["metadata"]!!)
+            canvas.drawText("Updated: ${dateFormat.format(Date(updatedAt))}", pageWidth / 2f, contentY, paints["metadata"]!!)
+            currentY += cardHeight + 10f
+
+            if (index < totalNotes - 1) {
+                canvas.drawLine(margin + 20f, currentY, pageWidth - margin - 20f, currentY, paints["divider"]!!)
+                currentY += 15f
+            }
+        }
+
+        drawHeader()
+        currentY = 140f
 
         db.collection("Notes_Collections")
             .document(userId)
             .collection("categories")
             .get()
             .addOnSuccessListener { categorySnapshot ->
+                hideLoading()
 
                 if (categorySnapshot.isEmpty) {
-                    Toast.makeText(requireContext(), "No notes found!", Toast.LENGTH_SHORT).show()
+                    showMessage("No notes found to generate report")
                     return@addOnSuccessListener
                 }
 
                 val categories = categorySnapshot.documents
-                var pending = categories.size
+                val totalCategories = categories.size
+                var processedCategories = 0
+
+                checkPageSpace(80f)
+                canvas.drawText("REPORT SUMMARY", margin, currentY, paints["sectionTitle"]!!)
+                currentY += 25f
+                canvas.drawText("Total Categories: $totalCategories", margin, currentY, paints["content"]!!)
+                currentY += 15f
+                canvas.drawText("Report Date: $currentDate", margin, currentY, paints["content"]!!)
+                currentY += 15f
+                canvas.drawText("Generated by: ${getString(R.string.app_name)}", margin, currentY, paints["content"]!!)
+                currentY += 30f
 
                 for (catDoc in categories) {
-
-                    val categoryName = catDoc.getString("title") ?: "Untitled Category"
-
-                    if (y > 720) addPage()
-
-                    // ---- Category Header Box ----
-                    canvas.drawRect(30f, y, 565f, y + 40f, categoryPaint)
-                    canvas.drawText("📂  $categoryName", 40f, y + 27f, contentPaint.apply { color = textMain })
-
-                    y += 50
+                    val categoryName = catDoc.getString("title") ?: "Uncategorized"
 
                     db.collection("Notes_Collections")
                         .document(userId)
@@ -552,73 +528,254 @@ class SettingsFragment : Fragment() {
                         .collection("categoryNotes")
                         .get()
                         .addOnSuccessListener { notesSnapshot ->
+                            val notes = notesSnapshot.documents
+                            val noteCount = notes.size
 
-                            if (notesSnapshot.isEmpty) {
-                                canvas.drawText("No notes available", 40f, y, descPaint)
-                                y += 25
-                            }
+                            drawCategoryHeader(categoryName, noteCount)
 
-                            for (noteDoc in notesSnapshot) {
-
-                                val id = noteDoc.getLong("id") ?: 0
-                                val title = noteDoc.getString("title") ?: "No Title"
-                                val desc = noteDoc.getString("description") ?: "No Description"
-                                val created = noteDoc.getLong("createdAt") ?: 0L
-                                val updated = noteDoc.getLong("updatedAt") ?: 0L
-
-                                if (y > 720) addPage()
-
-                                canvas.drawText("• ID: $id", 40f, y, contentPaint)
-                                y += 20
-
-                                canvas.drawText("Title: $title", 40f, y, contentPaint)
-                                y += 20
-
-                                canvas.drawText("Description:", 40f, y, contentPaint)
-                                y += 18
-
-                                // wrap description
-                                desc.chunked(55).forEach {
-                                    canvas.drawText("   → $it", 55f, y, descPaint)
-                                    y += 18
+                            if (notes.isEmpty()) {
+                                checkPageSpace(40f)
+                                canvas.drawText("No notes available in this category", margin + 20f, currentY, paints["content"]!!)
+                                currentY += 40f
+                            } else {
+                                for ((index, noteDoc) in notes.withIndex()) {
+                                    val noteData = mapOf(
+                                        "id" to noteDoc.getLong("id"),
+                                        "title" to noteDoc.getString("title"),
+                                        "description" to noteDoc.getString("description"),
+                                        "createdAt" to noteDoc.getLong("createdAt"),
+                                        "updatedAt" to noteDoc.getLong("updatedAt")
+                                    )
+                                    drawNoteCard(noteData, index, notes.size)
                                 }
-
-                                canvas.drawText("Created: ${dateFormat.format(Date(created))}", 40f, y, descPaint)
-                                y += 18
-
-                                canvas.drawText("Updated: ${dateFormat.format(Date(updated))}", 40f, y, descPaint)
-                                y += 25
-
-                                // divider
-                                canvas.drawLine(30f, y, 565f, y, dividerPaint)
-                                y += 15
                             }
 
-                            pending--
+                            processedCategories++
 
-                            if (pending == 0) {
+                            if (processedCategories == totalCategories) {
                                 pdf.finishPage(page)
+                                saveAndSharePdf(pdf, fileTimestamp, currentDate)
+                            }
+                        }
+                        .addOnFailureListener { e ->
+                            processedCategories++
+                            checkPageSpace(40f)
+                            canvas.drawText("Error loading notes for: $categoryName", margin, currentY, paints["errorText"]!!)
+                            currentY += 40f
 
-                                val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                                val file = File(downloads, "UserNotes_${System.currentTimeMillis()}.pdf")
-                                FileOutputStream(file).use { pdf.writeTo(it) }
-                                pdf.close()
-
-                                val uri = FileProvider.getUriForFile(requireContext(), "${requireContext().packageName}.provider", file)
-
-                                Toast.makeText(requireContext(), "PDF Saved Successfully!", Toast.LENGTH_LONG).show()
-
-                                val intent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "application/pdf"
-                                    putExtra(Intent.EXTRA_STREAM, uri)
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                startActivity(Intent.createChooser(intent, "Share PDF"))
+                            if (processedCategories == totalCategories) {
+                                pdf.finishPage(page)
+                                saveAndSharePdf(pdf, fileTimestamp, currentDate)
                             }
                         }
                 }
-
             }
+            .addOnFailureListener { e ->
+                hideLoading()
+                showMessage("Failed to load data: ${e.localizedMessage}")
+            }
+    }
+
+    private fun createPaints(colors: Map<String, Int>): Map<String, Paint> {
+        return mapOf(
+            "headerBackground" to Paint().apply {
+                color = colors["primary"]!!
+                style = Paint.Style.FILL
+                isAntiAlias = true
+            },
+            "title" to Paint().apply {
+                textSize = 22f
+                color = colors["white"]!!
+                typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD)
+                textAlign = Paint.Align.CENTER
+                isAntiAlias = true
+            },
+            "subtitle" to Paint().apply {
+                textSize = 14f
+                color = colors["white"]!!
+                typeface = Typeface.DEFAULT
+                textAlign = Paint.Align.CENTER
+                alpha = 200
+                isAntiAlias = true
+            },
+            "categoryHeader" to Paint().apply {
+                color = colors["secondary"]!!
+                style = Paint.Style.FILL
+                isAntiAlias = true
+            },
+            "categoryTitle" to Paint().apply {
+                textSize = 16f
+                color = colors["white"]!!
+                typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD)
+                isAntiAlias = true
+            },
+            "categorySubtitle" to Paint().apply {
+                textSize = 12f
+                color = colors["white"]!!
+                typeface = Typeface.DEFAULT
+                alpha = 180
+                isAntiAlias = true
+            },
+            "categoryIcon" to Paint().apply {
+                textSize = 10f
+                color = colors["white"]!!
+                isAntiAlias = true
+            },
+            "cardBackground" to Paint().apply {
+                color = colors["background"]!!
+                style = Paint.Style.FILL
+                isAntiAlias = true
+            },
+            "cardShadow" to Paint().apply {
+                color = colors["shadow"]!!
+                style = Paint.Style.FILL
+                isAntiAlias = true
+            },
+            "contentTitle" to Paint().apply {
+                textSize = 16f
+                color = colors["textPrimary"]!!
+                typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD)
+                isAntiAlias = true
+            },
+            "contentLabel" to Paint().apply {
+                textSize = 12f
+                color = colors["textSecondary"]!!
+                typeface = Typeface.DEFAULT
+                isAntiAlias = true
+            },
+            "content" to Paint().apply {
+                textSize = 12f
+                color = colors["textPrimary"]!!
+                typeface = Typeface.DEFAULT
+                isAntiAlias = true
+            },
+            "metadata" to Paint().apply {
+                textSize = 10f
+                color = colors["textTertiary"]!!
+                typeface = Typeface.DEFAULT
+                isAntiAlias = true
+            },
+            "metadataCenter" to Paint().apply {
+                textSize = 10f
+                color = colors["textTertiary"]!!
+                typeface = Typeface.DEFAULT
+                textAlign = Paint.Align.CENTER
+                isAntiAlias = true
+            },
+            "sectionTitle" to Paint().apply {
+                textSize = 18f
+                color = colors["primary"]!!
+                typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD)
+                isAntiAlias = true
+            },
+            "accent" to Paint().apply {
+                color = colors["accent"]!!
+                style = Paint.Style.FILL
+                isAntiAlias = true
+            },
+            "badge" to Paint().apply {
+                color = colors["accent"]!!
+                style = Paint.Style.FILL
+                isAntiAlias = true
+            },
+            "badgeText" to Paint().apply {
+                textSize = 9f
+                color = colors["white"]!!
+                typeface = Typeface.DEFAULT
+                isAntiAlias = true
+            },
+            "divider" to Paint().apply {
+                color = colors["textTertiary"]!!
+                strokeWidth = 0.5f
+                alpha = 80
+                isAntiAlias = true
+            },
+            "errorText" to Paint().apply {
+                textSize = 12f
+                color = colors["error"]!!
+                typeface = Typeface.DEFAULT
+                isAntiAlias = true
+            }
+        )
+    }
+
+    private fun wrapText(text: String, paint: Paint, maxWidth: Float): List<String> {
+        val lines = mutableListOf<String>()
+        val words = text.split(" ")
+        var currentLine = StringBuilder()
+
+        for (word in words) {
+            val testLine = if (currentLine.isEmpty()) word else "$currentLine $word"
+            if (paint.measureText(testLine) <= maxWidth) {
+                currentLine.append(if (currentLine.isEmpty()) word else " $word")
+            } else {
+                if (currentLine.isNotEmpty()) {
+                    lines.add(currentLine.toString())
+                }
+                currentLine = StringBuilder(word)
+            }
+        }
+        if (currentLine.isNotEmpty()) {
+            lines.add(currentLine.toString())
+        }
+        return lines
+    }
+
+    private fun truncateText(text: String, paint: Paint, maxWidth: Float): String {
+        return if (paint.measureText(text) <= maxWidth) {
+            text
+        } else {
+            var truncated = text
+            while (paint.measureText("$truncated...") > maxWidth && truncated.isNotEmpty()) {
+                truncated = truncated.dropLast(1)
+            }
+            "$truncated..."
+        }
+    }
+
+    private fun saveAndSharePdf(pdf: PdfDocument, timestamp: String, currentDate: String) {
+        try {
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val fileName = "Professional_Notes_Report_$timestamp.pdf"
+            val file = File(downloadsDir, fileName)
+
+            FileOutputStream(file).use { outputStream ->
+                pdf.writeTo(outputStream)
+            }
+            pdf.close()
+
+            val uri = FileProvider.getUriForFile(
+                requireContext(),
+                "${requireContext().packageName}.provider",
+                file
+            )
+
+            showMessage("Professional report generated successfully!")
+
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/pdf"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, "Professional Notes Report - $currentDate")
+                putExtra(Intent.EXTRA_TEXT, "Attached is my professional notes report generated on $currentDate.")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            startActivity(Intent.createChooser(shareIntent, "Share Professional Report"))
+
+        } catch (e: Exception) {
+            showMessage("Failed to save PDF: ${e.localizedMessage}")
+        }
+    }
+
+    private fun showLoading(message: String) {
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun hideLoading() {
+    }
+
+    private fun showMessage(message: String) {
+        Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
     }
 
 }

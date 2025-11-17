@@ -81,63 +81,6 @@
                 android:tint="@color/slate_gray" />
         </RelativeLayout>
 
-        <!-- Online/Offline Section -->
-        <RelativeLayout
-            android:id="@+id/layoutOnlineOffline"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="12dp"
-            android:background="?attr/selectableItemBackground"
-            android:clickable="true"
-            android:focusable="true"
-            android:paddingVertical="6dp">
-
-            <ImageView
-                android:id="@+id/iconOnlineOffline"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:layout_marginEnd="12dp"
-                android:src="@drawable/ic_wifi"
-                android:tint="@color/forest_green" />
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_toEndOf="@id/iconOnlineOffline"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/textOnlineOffline"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/roboto_medium"
-                    android:text="Online/Offline"
-                    android:textColor="@color/dark_charcoal"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/hintOnlineOffline"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/roboto_regular"
-                    android:text="Switch between online and offline modes"
-                    android:textColor="@color/slate_gray"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
-            <ImageView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:layout_marginEnd="16dp"
-                android:src="@drawable/ic_arrow_right"
-                android:tint="@color/slate_gray" />
-        </RelativeLayout>
-
         <!-- Download Data Section -->
         <RelativeLayout
             android:id="@+id/layoutDownloadData"

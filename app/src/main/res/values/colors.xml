@@ -67,5 +67,10 @@
     <color name="notePink">#FFCCE5</color>
     <color name="notePaleGreen">#D4F8C4</color>
     <color name="notePaleBlue">#D6EAF8</color>
-
+    <!-- Modern 2025 Color Palette -->
+    <color name="deep_navy_blue">#1a237e</color>
+    <color name="vibrant_teal">#00695c</color>
+    <color name="soft_mint_green">#4db6ac</color>
+    <color name="ultra_light_gray">#f5f7fa</color>
+    <color name="shadow_light">#1a000000</color>
 </resources>
