@@ -17,10 +17,12 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Dialog
 import android.content.Context
+import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.widget.ImageView
@@ -92,9 +94,10 @@ class NetworkChecker(
         dialog.setCancelable(true)
 
         val btnCloseDialog: ImageView = dialog.findViewById(R.id.btnCloseDialog)
+        val btnRetry: View = dialog.findViewById(R.id.retry_button)
         val noInternetCard: CardView = dialog.findViewById(R.id.no_internet_card)
 
-        // Show only the no internet card
+        // Show only the no-internet card
         noInternetCard.visibility = View.VISIBLE
         dialog.findViewById<View>(R.id.dialog_card).visibility = View.GONE
         dialog.findViewById<View>(R.id.search_card).visibility = View.GONE
@@ -106,7 +109,20 @@ class NetworkChecker(
             Log.d("NetworkChecker", "No internet dialog dismissed")
             dialog.dismiss()
         }
+        btnRetry.setOnClickListener {
+            Log.d("NetworkChecker", "Retry clicked → Opening settings")
+            openNetworkSettings()
+            dialog.dismiss()
+        }
 
         dialog.show()
     }
+    private fun openNetworkSettings() {
+        try {
+            activity.startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
+        } catch (e: Exception) {
+            activity.startActivity(Intent(Settings.ACTION_SETTINGS))
+        }
+    }
+
 }
